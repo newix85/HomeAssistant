@@ -5,7 +5,7 @@
   },
   "renderScale": 0.75,
   "staleMinutes": 30,
-  "pressureAltitudeM": null,
+  "pressureAltitudeM": 170,
   "entities": {
     "sun": "sun.sun",
     "weather": "weather.domov",
