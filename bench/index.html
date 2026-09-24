@@ -22,13 +22,15 @@
 <script type="module">
 // Benchmark scény ve stylu aplikace: low-poly dům, gradientová obloha, Lambert, bez stínů.
 // Parametry URL: ?scale=0.75 (pevné rozlišení, bez auto testu) &aa=1 (MSAA) &trees=40
+//                &steps=0.5,1,0.75 (pořadí kroků auto testu)
 import * as THREE from 'three';
 
 const params = new URLSearchParams(location.search);
 const fixedScale = params.has('scale') ? Number(params.get('scale')) : null;
 const antialias = params.get('aa') === '1';
 const treeCount = Number(params.get('trees') ?? 40);
-const STEPS = fixedScale ? [fixedScale] : [1, 0.75, 0.5];
+const STEPS = fixedScale ? [fixedScale]
+  : params.has('steps') ? params.get('steps').split(',').map(Number) : [1, 0.75, 0.5];
 const WARMUP_MS = 2000, MEASURE_MS = 8000;
 
 const renderer = new THREE.WebGLRenderer({ antialias, powerPreference: 'high-performance' });
@@ -119,6 +121,27 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 
+// Skutečný čas GPU na snímek (jen naše scéna, bez kompozitoru Chromia).
+// rAF fps bez vsync měří jen rychlost odesílání příkazů, ne vykreslení.
+const timerExt = gl.getExtension('EXT_disjoint_timer_query_webgl2');
+let pendingQueries = [], gpuSamples = [];
+
+function pollQueries() {
+  pendingQueries = pendingQueries.filter(({ q, measured }) => {
+    if (!gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE)) return true;
+    const disjoint = gl.getParameter(timerExt.GPU_DISJOINT_EXT);
+    if (measured && !disjoint) gpuSamples.push(gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6);
+    gl.deleteQuery(q);
+    return false;
+  });
+}
+
+const median = (xs) => {
+  if (!xs.length) return null;
+  const sorted = [...xs].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+};
+
 const results = [];
 let step = 0, stepStart = performance.now(), frames = [], last = performance.now(), hudAt = 0;
 
@@ -128,7 +151,7 @@ function finishStep(now) {
   const p95 = measured[Math.floor(measured.length * 0.95)] ?? 0;
   const buf = new THREE.Vector2();
   renderer.getDrawingBufferSize(buf);
-  results.push({ scale, res: `${buf.x}x${buf.y}`, fps: 1000 / avg, p95 });
+  results.push({ scale, res: `${buf.x}x${buf.y}`, fps: 1000 / avg, p95, gpuMs: median(gpuSamples) });
   console.log('bench', JSON.stringify(results.at(-1)));
   step++;
   if (step < STEPS.length) {
@@ -136,6 +159,7 @@ function finishStep(now) {
     resize();
     stepStart = now;
     frames = [];
+    gpuSamples = [];
   } else {
     showResults();
   }
@@ -143,7 +167,8 @@ function finishStep(now) {
 
 function showResults() {
   const lines = results.map((r) =>
-    `scale ${r.scale.toFixed(2)}  ${r.res.padEnd(10)}  ${r.fps.toFixed(1).padStart(5)} fps  p95 ${r.p95.toFixed(1)} ms`);
+    `scale ${r.scale.toFixed(2)}  ${r.res.padEnd(10)}  ${r.fps.toFixed(1).padStart(5)} fps  p95 ${r.p95.toFixed(1)} ms` +
+    `  GPU ${r.gpuMs === null ? 'n/a' : r.gpuMs.toFixed(1) + ' ms'}`);
   const text = `${glRenderer}\nAA: ${antialias ? 'ano' : 'ne'}, stromů: ${treeCount}\n\n${lines.join('\n')}`;
   document.querySelector('#result pre').textContent = text;
   document.getElementById('result').style.display = 'grid';
@@ -155,11 +180,25 @@ renderer.setAnimationLoop((now) => {
   const dt = now - last;
   last = now;
   frames.push({ t: now, dt });
+  if (dt > 500) {
+    // Zaseknutí: wall = epoch ms pro srovnání s časy měřicího skriptu
+    console.log('bench-stall ' + JSON.stringify({ wall: Date.now(), dt: Math.round(dt), scale, step: step + 1 }));
+  }
 
   const a = now / 6000;
   camera.position.set(Math.cos(a) * 34, 14, Math.sin(a) * 34);
   camera.lookAt(0, 3, 0);
+  let query = null;
+  if (timerExt && pendingQueries.length < 8) {
+    query = gl.createQuery();
+    gl.beginQuery(timerExt.TIME_ELAPSED_EXT, query);
+  }
   renderer.render(scene, camera);
+  if (query) {
+    gl.endQuery(timerExt.TIME_ELAPSED_EXT);
+    pendingQueries.push({ q: query, measured: now - stepStart >= WARMUP_MS });
+  }
+  if (timerExt) pollQueries();
 
   if (!fixedScale && now - stepStart >= WARMUP_MS + MEASURE_MS) finishStep(now);
 
@@ -169,8 +208,10 @@ renderer.setAnimationLoop((now) => {
   const recent = frames.slice(-30);
   const fps = 1000 / (recent.reduce((s, f) => s + f.dt, 0) / recent.length);
   const i = renderer.info.render;
+  const gpu = median(gpuSamples.slice(-30));
   hud.textContent =
-    `${glRenderer}\nscale ${scale.toFixed(2)}  ${fps.toFixed(1)} fps\n` +
+    `${glRenderer}\nscale ${scale.toFixed(2)}  ${fps.toFixed(1)} fps` +
+    (gpu === null ? '' : `  GPU ${gpu.toFixed(1)} ms`) + '\n' +
     `draw calls ${i.calls}  trojúhelníků ${i.triangles}\n` +
     (fixedScale ? 'volný běh' : `krok ${step + 1}/${STEPS.length}  ${Math.max(0, Math.ceil((stepStart + WARMUP_MS + MEASURE_MS - now) / 1000))} s`);
 });

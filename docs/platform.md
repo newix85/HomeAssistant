@@ -54,8 +54,32 @@ Zjištění z `chrome://gpu` (Chromium 150):
   (reload), kiosk musí běžet pod dohledem, který ho při pádu znovu spustí.
 - Displej 1920×1080 @ 56,6 Hz. Strop je tedy ~56 fps, cílem je stabilních 30.
 
-Měření výkonu: `bench/index.html` (scéna ve stylu appky, automaticky změří
-fps při `renderScale` 1 / 0,75 / 0,5).
+Měření výkonu: `scripts/run-bench.sh` spustí `bench/index.html` (scéna ve stylu
+appky) a změří fps, p95 a **čas GPU na snímek** (`EXT_disjoint_timer_query_webgl2`)
+při `renderScale` 1 / 0,75 / 0,5.
+
+Naměřeno na RK3288 (low-poly scéna, 7 draw callů, ~2 200 trojúhelníků):
+
+| Režim | 1920×1080 | 1440×810 | 960×540 |
+|---|---|---|---|
+| vsync (výchozí Chromium) | 21,9 fps | 22,4 fps | 26,8 fps |
+| unlimited (odesílání, ne vykreslení!) | 108,7 | (zaseknutí) | 382 |
+
+Poučení z měření:
+
+- `--disable-frame-rate-limit` **nepoužívat**: rAF pak běží rychleji, než GPU
+  kreslí, fronta příkazů roste a první synchronní operace (např. změna velikosti
+  plátna) čeká na její vyprázdnění. Naměřeno ~11 s zaseknutí, reprodukovatelné
+  i mimo desku. Fps v tomto režimu ukazuje rychlost odesílání, ne výkon.
+- Z doby dohánění fronty vychází skutečný výkon ~50 fps v 1080p (~19 ms/snímek),
+  tedy těsně nad 17,7 ms periodou displeje 56,6 Hz. S vsync proto fps padá na
+  polovinu (~22–28). Upřesní měření času GPU.
+- Kompozitor xfwm4 výkon měřitelně nebere, nechat zapnutý (bez vsync v Chromiu
+  zajistí obraz bez trhání).
+- Kandidát pro kiosk: `--disable-gpu-vsync` **bez** `--disable-frame-rate-limit`
+  (režim `paced`): Chromium dál časuje snímky, GPU neblokuje na vblank.
+- Teplota při trvalé animaci stoupla na 65–69 °C → appka musí kreslit jen při
+  změně a animace omezit (cíl 28 fps = polovina 56,6 Hz, rovnoměrně).
 
 Výkon celé věci stojí na GPU desky. Armbian 13 nese novou Mesu, takže:
 
