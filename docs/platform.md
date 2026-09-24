@@ -54,6 +54,13 @@ Zjištění z `chrome://gpu` (Chromium 150):
   (reload), kiosk musí běžet pod dohledem, který ho při pádu znovu spustí.
 - Displej 1920×1080 @ 56,6 Hz. Strop je tedy ~56 fps, cílem je stabilních 30.
 
+**Konfigurace kiosku (rozhodnuto měřením):**
+
+- kompozitor xfwm4 **vypnutý** (`xfconf-query -c xfwm4 -p /general/use_compositing -s false`),
+- Chromium: `--kiosk --use-angle=gles`, výchozí vsync (žádné `--disable-gpu-vsync`
+  ani `--disable-frame-rate-limit`),
+- appka: `renderScale` **0,75**, kreslení jen při změně, overlaye max 1–2× za s.
+
 Měření výkonu: `scripts/run-bench.sh` spustí `bench/index.html` (scéna ve stylu
 appky) a změří fps, p95 a **čas GPU na snímek** (`EXT_disjoint_timer_query_webgl2`)
 při `renderScale` 1 / 0,75 / 0,5.
@@ -66,6 +73,8 @@ Naměřeno na RK3288 (low-poly scéna, 7 draw callů, ~2 200 trojúhelníků):
 | unlimited (odesílání, ne vykreslení!) | 108,7 | (zaseknutí) | 382 |
 | vsync, HUD jen 2× za s | 21,9 | 28,2 | 37,3 |
 | paced (`--disable-gpu-vsync`) | 17,8 | 18,5 | 20,1 |
+| **vsync, kompozitor xfwm4 vypnutý** | **39,9** | **53,5** | **53,6** |
+| vsync, kompozitor vypnutý, `desync=1` | 42,3 | 53,9 | 53,6 |
 
 Poučení z měření:
 
@@ -76,13 +85,17 @@ Poučení z měření:
 - Z doby dohánění fronty vychází skutečný výkon ~50 fps v 1080p (~19 ms/snímek),
   tedy těsně nad 17,7 ms periodou displeje 56,6 Hz. S vsync proto fps padá na
   polovinu (~22–28). Upřesní měření času GPU.
-- Kompozitor xfwm4 výkon měřitelně nebere, nechat zapnutý (bez vsync v Chromiu
-  zajistí obraz bez trhání).
+- **Kompozitor xfwm4 byl hlavní brzda**: kopíroval každý snímek 1920×1080
+  a na paměti RK3288 stál ~polovinu výkonu. Po vypnutí je `renderScale` 0,75 na
+  ~53,5 fps, tedy skoro na stropu displeje 56,6 Hz. (Dřívější závěr „kompozitor
+  nevadí“ pocházel z vadného měření v režimu unlimited.)
+- `desynchronized` WebGL kontext Chromium přijme, ale na X11 nic nepřinese
+  (rozdíl v šumu). Nepoužívat.
 - Režim `paced` (`--disable-gpu-vsync`) je na desce **horší** než výchozí vsync,
   nepoužívat.
 - **Změna DOM každý snímek je drahá**: zpomalení HUDu na 2× za sekundu zvedlo
   fps o 25–40 %. Overlaye appky aktualizovat nejvýš 1–2× za sekundu.
-- Model z měření ve vsync: snímek ≈ **20 ms pevně** (skládání 1920×1080 v Chromiu
+- Model z měření ve vsync (s kompozitorem): snímek ≈ **20 ms pevně** (skládání 1920×1080 v Chromiu
   a xfwm4) **+ ~12 ms na megapixel** 3D plátna. Brzdí propustnost paměti
   (každá kopie celé obrazovky ~16 MB), ne složitost scény. Zrychlení tedy přes
   méně celoobrazovkových kopií, ne přes jednodušší 3D.
