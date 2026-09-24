@@ -1,2 +1,5 @@
 # Token k HA – nikdy necommitovat (repo je veřejné)
 app/config.json
+
+# Mezipaměť Pythonu
+__pycache__/
