@@ -55,9 +55,15 @@ globální objekt `hass` a spustí přepočet všech karet. Při stovkách entit
 s aktualizacemi po sekundách (výkony, RSSI, …) je hlavní vlákno prohlížeče pořád zahlcené.
 Chromium za to nemůže, dělá to ten vzor. Tady to řešíme takhle:
 
-1. **Explicitní whitelist entit** v konfiguraci. Odběr jen přes
-   `subscribe_entities` s parametrem `entity_ids` (filtr probíhá **na straně HA**,
-   ostatní entity po síti vůbec nepřijdou).
+1. **Explicitní whitelist entit.** Odběr jen přes `subscribe_entities` s parametrem
+   `entity_ids` (filtr probíhá **na straně HA**, ostatní entity po síti vůbec
+   nepřijdou). Instalace má **~7000 entit**, appka potřebuje řádově stovku.
+   Zdroj pravdy je **štítek (label) v HA**, např. `dum3d`, případně po pohledech
+   `dum3d_energie`, `dum3d_zahrada`. Entity se tedy přidávají klikáním v HA, ne úpravou
+   kódu. Appka si je při startu vyžádá šablonou
+   `{{ label_entities('dum3d') | tojson }}` přes `render_template` (jedna malá
+   odpověď). **Nikdy** nevolá `get_states` ani registr entit celý, u 7000 entit
+   jde o jednotky MB JSONu.
 2. **Store mimo vykreslování**: příchozí změny se jen zapíšou do mapy
    (`entity_id → stav`), nic dalšího se nespouští.
 3. **Dávkování**: překreslení nejvýš jednou za snímek (`requestAnimationFrame`),
