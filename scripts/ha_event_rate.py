@@ -21,6 +21,7 @@ import os
 import sys
 import time
 from collections import Counter
+from urllib.parse import urlsplit
 
 import websockets
 
@@ -115,7 +116,19 @@ def main() -> None:
     token = os.environ.get("HA_TOKEN")
     if not token:
         sys.exit("Nastav HA_TOKEN (long-lived access token).")
-    asyncio.run(measure(args.url, token, args.seconds, args.top, args.label))
+
+    parts = urlsplit(args.url)
+    if parts.scheme not in ("http", "https") or not parts.hostname or "://" in parts.netloc + parts.path:
+        sys.exit(f"Neplatná adresa HA: {args.url!r}\n"
+                 "Očekávám např. http://192.168.1.10:8123 nebo http://homeassistant.local:8123")
+    try:
+        asyncio.run(measure(args.url, token, args.seconds, args.top, args.label))
+    except websockets.exceptions.WebSocketException as e:
+        sys.exit(f"Server na {args.url} nepřijal WebSocket spojení: {e}\n"
+                 "Je to opravdu adresa Home Assistantu (port 8123)?")
+    except OSError as e:
+        sys.exit(f"Nelze se připojit k {args.url}: {e}\n"
+                 f"Ověř adresu (getent hosts {parts.hostname}) a že HA běží.")
 
 
 if __name__ == "__main__":
