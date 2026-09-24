@@ -19,7 +19,8 @@ section "GPU ovladač (kernel)"
 drivers=$(for d in /sys/class/drm/card*/device/driver; do [ -e "$d" ] && basename "$(readlink -f "$d")"; done | sort -u)
 echo "${drivers:-žádný DRM ovladač nenalezen}"
 case "$drivers" in
-  *panthor*|*panfrost*) echo "-> Mali G-series: WebGL 2 by měl fungovat." ;;
+  *panthor*)            echo "-> Mali G (Valhall/5th gen): WebGL 2 by měl fungovat." ;;
+  *panfrost*)           echo "-> Mali T/G (Midgard/Bifrost): WebGL 2 by měl fungovat, výkon dle generace." ;;
   *lima*)               echo "-> Mali-400/450: jen WebGL 1, scéna musí být velmi lehká." ;;
   *)                    echo "-> Neznámý/žádný GPU ovladač: riziko softwarového renderingu." ;;
 esac

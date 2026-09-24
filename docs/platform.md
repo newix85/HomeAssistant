@@ -31,6 +31,12 @@ Python má v projektu místo, jen ne v renderingu – viz „Rozšíření“.
 
 ## Realita hardwaru (hlavní riziko)
 
+**Cílové zařízení (ověřeno 2026-09):** Rockchip RK3288, `armv7l` (32 bit), 2 GB RAM,
+GPU Mali-T760 (Panfrost, OpenGL ES 3.1, Mesa 25.0), XFCE na X11, Chromium 150 z Debianu.
+Znamená to: WebGL 2 ano, ale skromný výkon a fill-rate. Proto platí striktně low-poly,
+render on demand a `renderScale` pod 1 na velkých displejích. RAM hlídat (jen jedna
+stránka v kiosku, žádná rozšíření).
+
 Výkon celé věci stojí na GPU desky. Armbian 13 nese novou Mesu, takže:
 
 - **Mali G-series (RK3588 – Panthor, RK356x/H6/H616/S905X3 – Panfrost):** WebGL 2 v Chromiu funguje, low-poly scéna při 30–60 fps v pohodě.
