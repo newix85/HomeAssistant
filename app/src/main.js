@@ -36,13 +36,25 @@ async function start() {
   const overlay = new Overlay(overlayRoot, config);
   const { sun: sunId, weather: weatherId } = config.entities;
   let envKey = '';
+  let reportedMissing = false;
+  const entityIds = [...new Set(Object.values(config.entities).filter(Boolean))];
 
   const client = new HAClient({
     url: config.ha.url,
     token: config.ha.token,
-    entityIds: [...new Set(Object.values(config.entities).filter(Boolean))],
-    onStatus: (status, detail) => overlay.setStatus(status, detail),
+    entityIds,
+    onStatus: (status, detail) => {
+      console.log(`HA: ${status}${detail ? ` (${detail})` : ''}`);
+      overlay.setStatus(status, detail);
+    },
     onStates: (changed, states) => {
+      if (!reportedMissing) {
+        // první dávka = všechny existující entity; co chybí, je překlep v configu
+        reportedMissing = true;
+        const missing = entityIds.filter((id) => !states.has(id));
+        console.log(`Přijato ${states.size} z ${entityIds.length} entit`);
+        if (missing.length) console.warn(`V HA neexistuje: ${missing.join(', ')}`);
+      }
       overlay.update(states);
       if (!changed.has(sunId) && !changed.has(weatherId)) return;
       const sun = states.get(sunId);
