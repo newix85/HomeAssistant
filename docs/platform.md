@@ -160,6 +160,12 @@ Diagnostika: `scripts/ha_event_rate.py` změří, kolik změn za sekundu HA pos�
 a které entity jsou nejhlučnější. U těch se vyplatí snížit frekvenci
 aktualizací už v HA (interval pollingu integrace, `throttle`/filtr senzoru).
 
+## Zdroj dat: jen dům a zahrada u domu
+
+Entity s `zahradka` v `entity_id` patří **Zahrádce**, samostatnému místu mimo dům.
+Projekt je **nepoužívá** (rozhodnutí uživatele); `ha_find_entities.py` je vyřazuje
+vždy. Pozor na záměnu: „zahrada“ = zahrada kolem domu, „zahrádka“ = jiné místo.
+
 ## Pohledy (mapa na architekturu)
 
 Každý pohled = jedna „scéna“ se sdíleným rendererem a sdíleným HA stavem:

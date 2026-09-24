@@ -7,6 +7,10 @@ Použití:
     python3 scripts/ha_find_entities.py            # max. 12 kandidátů na roli
     python3 scripts/ha_find_entities.py --limit 0  # všichni kandidáti
     python3 scripts/ha_find_entities.py --role rain --role wind_direction --limit 0
+    python3 scripts/ha_find_entities.py --exclude kolna      # vyřadit další entity
+
+Entity Zahrádky (samostatné místo mimo dům) projekt nepoužívá, proto jsou
+vyřazené vždy (DEFAULT_EXCLUDE).
 
 ★ = jméno napovídá venkovnímu/meteo senzoru. „stáří“ = kdy entita naposledy
 něco nahlásila (last_reported); vysoké stáří prozradí mrtvou/zdvojenou kopii.
@@ -36,8 +40,12 @@ ROLES: dict[str, tuple[str, set[str], tuple[str, ...]]] = {
 }
 
 # Nápovědy, že jde o venkovní / meteo senzor (bez diakritiky, malými písmeny)
-OUTDOOR_HINTS = ("venk", "outdoor", "outside", "exterior", "zahrad", "garden", "meteo",
+# „zahrada“ = zahrada u domu; „zahradka“ je jiné místo, proto ne obecné „zahrad“
+OUTDOOR_HINTS = ("venk", "outdoor", "outside", "exterior", "zahrada", "garden", "meteo",
                  "weather", "pocasi", "station", "stanice", "ecowitt", "netatmo", "davis")
+
+# Zahrádka je jiné místo než dům, projekt ji nepoužívá (rozhodnutí uživatele)
+DEFAULT_EXCLUDE = ("zahradka",)
 
 # Tyhle domény nejsou měření (např. number.*_temperature je nastavení)
 SENSOR_DOMAINS = ("sensor",)
@@ -85,7 +93,7 @@ def fmt_state(state: dict) -> str:
     return f"{state['state']} {unit}".strip()
 
 
-async def find(url: str, token: str, limit: int, roles: list[str]) -> None:
+async def find(url: str, token: str, limit: int, roles: list[str], exclude: list[str]) -> None:
     async with await ha_client.connect(url, token) as ws:
         await ws.send(json.dumps({"id": 1, "type": "get_states"}))
         while True:
@@ -95,6 +103,9 @@ async def find(url: str, token: str, limit: int, roles: list[str]) -> None:
                 break
 
     print(f"Entit v HA: {len(states)}")
+    exclude = [*DEFAULT_EXCLUDE, *exclude]
+    states = [s for s in states if not any(x in s["entity_id"] for x in exclude)]
+    print(f"Po vyřazení entit obsahujících {', '.join(exclude)}: {len(states)}")
     for role, (title, classes, _) in ROLES.items():
         if roles and role not in roles:
             continue
@@ -126,8 +137,10 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=12, help="max. kandidátů na roli (0 = všichni)")
     parser.add_argument("--role", action="append", choices=list(ROLES), default=[],
                         help="jen tahle role (lze opakovat)")
+    parser.add_argument("--exclude", action="append", default=[],
+                        help="vyřadit entity, jejichž entity_id obsahuje tento text (lze opakovat)")
     args = parser.parse_args()
-    ha_client.run(args.url, lambda url, token: find(url, token, args.limit, args.role))
+    ha_client.run(args.url, lambda url, token: find(url, token, args.limit, args.role, args.exclude))
 
 
 if __name__ == "__main__":
