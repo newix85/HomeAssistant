@@ -17,32 +17,15 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import os
 import sys
 import time
 from collections import Counter
-from urllib.parse import urlsplit
 
-import websockets
-
-
-def ws_url(http_url: str) -> str:
-    base = http_url.rstrip("/")
-    if base.startswith("https://"):
-        base = "wss://" + base[len("https://"):]
-    elif base.startswith("http://"):
-        base = "ws://" + base[len("http://"):]
-    return base + "/api/websocket"
+import ha_client
 
 
 async def measure(url: str, token: str, seconds: float, top: int, label: str | None) -> None:
-    async with websockets.connect(ws_url(url), max_size=None) as ws:
-        await ws.recv()  # auth_required
-        await ws.send(json.dumps({"type": "auth", "access_token": token}))
-        auth = json.loads(await ws.recv())
-        if auth.get("type") != "auth_ok":
-            sys.exit(f"Autentizace selhala: {auth}")
-
+    async with await ha_client.connect(url, token) as ws:
         await ws.send(json.dumps({"id": 1, "type": "get_states"}))
         await ws.send(json.dumps({"id": 2, "type": "subscribe_events", "event_type": "state_changed"}))
         labeled: set[str] | None = None
@@ -107,28 +90,13 @@ async def measure(url: str, token: str, seconds: float, top: int, label: str | N
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--url", default=os.environ.get("HA_URL", "http://homeassistant.local:8123"))
+    ha_client.add_connection_args(parser)
     parser.add_argument("--seconds", type=float, default=60)
     parser.add_argument("--top", type=int, default=20)
     parser.add_argument("--label", help="měřit jen entity s tímto štítkem (label_id)")
     args = parser.parse_args()
 
-    token = os.environ.get("HA_TOKEN")
-    if not token:
-        sys.exit("Nastav HA_TOKEN (long-lived access token).")
-
-    parts = urlsplit(args.url)
-    if parts.scheme not in ("http", "https") or not parts.hostname or "://" in parts.netloc + parts.path:
-        sys.exit(f"Neplatná adresa HA: {args.url!r}\n"
-                 "Očekávám např. http://192.168.1.10:8123 nebo http://homeassistant.local:8123")
-    try:
-        asyncio.run(measure(args.url, token, args.seconds, args.top, args.label))
-    except websockets.exceptions.WebSocketException as e:
-        sys.exit(f"Server na {args.url} nepřijal WebSocket spojení: {e}\n"
-                 "Je to opravdu adresa Home Assistantu (port 8123)?")
-    except OSError as e:
-        sys.exit(f"Nelze se připojit k {args.url}: {e}\n"
-                 f"Ověř adresu (getent hosts {parts.hostname}) a že HA běží.")
+    ha_client.run(args.url, lambda url, token: measure(url, token, args.seconds, args.top, args.label))
 
 
 if __name__ == "__main__":

@@ -148,6 +148,14 @@ Chromium za to nemůže, dělá to ten vzor. Tady to řešíme takhle:
 6. **Historie až na vyžádání** (`history/stream` pro jeden graf), žádné
    trvalé odebírání historie.
 
+Naměřeno na instalaci (5 min): **6117 entit, aktivních jen 328, 24 změn/s,
+28 KiB/s**. Nejhlučnější jsou výkony EcoFlow (River 3 Plus, Delta 3 Plus,
+Stream AC Pro; ~1× za s), dále SolaX, OpenDTU a smart meter. Čistý šum
+(appka neodebírá, kandidáti na vyřazení z recorderu):
+`sensor.solax_inverter_communication_health` (100 % jen atributy),
+`sensor.solax_inverter_rtc`, `sensor.opendtu*_uptime*`. Appka se ~100 entitami
+dostane odhadem 3–8 změn/s, což je pro prohlížeč zanedbatelné.
+
 Diagnostika: `scripts/ha_event_rate.py` změří, kolik změn za sekundu HA posílá
 a které entity jsou nejhlučnější. U těch se vyplatí snížit frekvenci
 aktualizací už v HA (interval pollingu integrace, `throttle`/filtr senzoru).
