@@ -119,7 +119,7 @@ addEventListener('resize', resize);
 resize();
 
 const results = [];
-let step = 0, stepStart = performance.now(), frames = [], last = performance.now();
+let step = 0, stepStart = performance.now(), frames = [], last = performance.now(), hudAt = 0;
 
 function finishStep(now) {
   const measured = frames.filter((f) => f.t >= stepStart + WARMUP_MS).map((f) => f.dt).sort((a, b) => a - b);
@@ -160,6 +160,11 @@ renderer.setAnimationLoop((now) => {
   camera.lookAt(0, 3, 0);
   renderer.render(scene, camera);
 
+  if (!fixedScale && now - stepStart >= WARMUP_MS + MEASURE_MS) finishStep(now);
+
+  // HUD jen 2× za sekundu: DOM změna každý snímek stojí na ARM citelný čas
+  if (now - hudAt < 500 || frames.length < 2) return;
+  hudAt = now;
   const recent = frames.slice(-30);
   const fps = 1000 / (recent.reduce((s, f) => s + f.dt, 0) / recent.length);
   const i = renderer.info.render;
@@ -167,8 +172,6 @@ renderer.setAnimationLoop((now) => {
     `${glRenderer}\nscale ${scale.toFixed(2)}  ${fps.toFixed(1)} fps\n` +
     `draw calls ${i.calls}  trojúhelníků ${i.triangles}\n` +
     (fixedScale ? 'volný běh' : `krok ${step + 1}/${STEPS.length}  ${Math.max(0, Math.ceil((stepStart + WARMUP_MS + MEASURE_MS - now) / 1000))} s`);
-
-  if (!fixedScale && now - stepStart >= WARMUP_MS + MEASURE_MS) finishStep(now);
 });
 </script>
 </body>
