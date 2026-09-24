@@ -1,0 +1,24 @@
+{
+  "ha": {
+    "url": "http://homeassistant.local:8123",
+    "token": "VLOZ_SEM_TOKEN"
+  },
+  "renderScale": 0.75,
+  "staleMinutes": 30,
+  "pressureAltitudeM": null,
+  "entities": {
+    "sun": "sun.sun",
+    "weather": "weather.domov",
+    "temperature": "sensor.gw1100a_outdoor_temperature",
+    "humidity": "sensor.gw1100a_humidity",
+    "pressure": "sensor.gw1100a_relative_pressure",
+    "illuminance": "sensor.gw1100a_solar_lux",
+    "irradiance": "sensor.gw1100a_solar_radiation",
+    "uv": "sensor.gw1100a_uv_index",
+    "windSpeed": "sensor.gw1100a_wind_speed",
+    "windGust": "sensor.gw1100a_wind_gust",
+    "windDirection": "sensor.gw1100a_wind_direction",
+    "rainRate": "sensor.gw1100a_rain_rate",
+    "rainToday": "sensor.gw1100a_daily_rain_rate"
+  }
+}

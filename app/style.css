@@ -1,0 +1,92 @@
+/* Minimalistický overlay. Záměrně bez backdrop-filter, stínů a průhledných
+   přechodů: na Mali-T760 je každý efekt přes celou obrazovku drahý. */
+
+:root {
+  --text: #f4f7fb;
+  --muted: rgba(244, 247, 251, .68);
+  --panel: rgba(8, 16, 30, .46);
+  --ok: #6fd08c;
+  --warn: #f2b84b;
+  --bad: #ef6a5b;
+  font-family: system-ui, "Noto Sans", "DejaVu Sans", sans-serif;
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0b1a2e;
+  color: var(--text);
+  cursor: none; /* kiosk */
+}
+
+#scene, #scene canvas { position: fixed; inset: 0; display: block; }
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto 1fr auto;
+  padding: 36px 44px;
+  pointer-events: none;
+}
+
+.clock { grid-column: 1; }
+.time { font-size: 104px; font-weight: 250; line-height: 1; letter-spacing: -2px; }
+.date { font-size: 26px; margin-top: 6px; }
+.sun-event { font-size: 20px; color: var(--muted); margin-top: 4px; }
+.time, .date, .sun-event { text-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
+
+.weather {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  background: var(--panel);
+  border-radius: 14px;
+  padding: 14px 18px;
+}
+.label { font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.label span { text-transform: none; letter-spacing: 0; }
+.value { font-size: 34px; font-weight: 300; margin-top: 2px; }
+.big { font-size: 72px; font-weight: 250; line-height: 1.05; }
+small { font-size: .45em; margin-left: 6px; color: var(--muted); }
+.sub { font-size: 17px; color: var(--muted); margin-top: 2px; }
+
+.wind { display: flex; align-items: baseline; gap: 10px; }
+.arrow { display: inline-block; font-size: 30px; transition: none; }
+
+/* stará data ztlumit, chybějící jen pomlčka */
+.stale { opacity: .45; }
+.missing { opacity: .6; }
+
+.status {
+  grid-column: 1;
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.status i { width: 9px; height: 9px; border-radius: 50%; background: var(--warn); }
+#overlay[data-status="connected"] .status i { background: var(--ok); }
+#overlay[data-status="auth_invalid"] .status i { background: var(--bad); }
+#overlay[data-status="connected"] .status span { opacity: 0; }
+
+#setup {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  background: #0b1a2e;
+  font-size: 22px;
+}
+#setup[hidden] { display: none; }
+#setup p { max-width: 36em; color: var(--muted); }

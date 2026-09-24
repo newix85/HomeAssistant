@@ -8,12 +8,12 @@
 |---|---|---|
 | Runtime / displej | **Chromium v kiosk režimu** spuštěný z autostartu XFCE | Nejlepší WebGL na ARM Linuxu (GPU přes Mesa/Panfrost), bez okenních dekorací, snadný restart |
 | 3D | **Three.js** (WebGL 2, fallback WebGL 1) | Malý, zralý, glTF loader, ideální pro minimalistický low-poly styl |
-| Jazyk / build | **TypeScript + Vite** | Rychlý dev server s hot reloadem na PC, výstup = statické soubory |
+| Jazyk / build | **Čisté ES moduly (JavaScript), bez buildu** | Na desce stačí `git pull`; three.js přibalené v `app/vendor/` (žádná závislost na CDN/internetu). *Změna oproti původnímu TypeScript + Vite: armv7 deska nemá build nástroje a kiosk nesmí záviset na síti.* |
 | UI nad scénou | Čisté HTML/CSS overlaye (bez velkého frameworku) | Minimalismus, nulová režie; framework lze přidat později, pokud UI naroste |
-| Napojení na HA | **WebSocket API** přes `home-assistant-js-websocket` | Push stavů v reálném čase (`subscribe_entities`), volání služeb, oficiální knihovna |
+| Napojení na HA | **WebSocket API**, vlastní klient `app/src/ha.js` (~150 řádků) | Push stavů (`subscribe_entities` s `entity_ids`), reconnect s backoffem, ping/pong hlídá mrtvé spojení |
 | Kamery | HA stream / **go2rtc (WebRTC nebo MSE)** do `<video>` | Nízká latence, dekódování v prohlížeči, žádná vlastní transkódovací vrstva |
 | 3D modely | **glTF/GLB** (Blender, případně export ze Sweet Home 3D) | Standard, komprimovatelný (Draco/meshopt), přímá podpora v Three.js |
-| Nasazení | Statický build servírovaný `nginx`/`caddy` na zařízení (nebo z HA `/config/www`) | Žádný běžící Node na zařízení |
+| Nasazení | `app/` servírované lokálně (`python3 -m http.server` na 127.0.0.1), spuštění `scripts/run-app.sh` | Žádný Node ani build na zařízení |
 
 Jedna věta: **webová aplikace (Three.js) jako statické soubory, zobrazená v Chromium kiosku, mluvící přímo s HA přes WebSocket.**
 

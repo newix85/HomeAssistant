@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<title>Dům 3D</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+  { "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+<script type="module" src="src/main.js"></script>
+</head>
+<body>
+<div id="scene"></div>
+
+<main id="overlay" data-status="connecting">
+  <section class="clock">
+    <div class="time" data-field="time">--:--</div>
+    <div class="date" data-field="date"></div>
+    <div class="sun-event" data-field="sunEvent"></div>
+  </section>
+
+  <section class="weather">
+    <div class="card hero">
+      <div class="label">Venku <span data-field="condition"></span></div>
+      <div class="big"><span data-field="temperature">—</span><small>°C</small></div>
+      <div class="sub">vlhkost <span data-field="humidity">—</span> %</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Tlak</div>
+      <div class="value"><span data-field="pressure">—</span><small>hPa</small></div>
+    </div>
+
+    <div class="card">
+      <div class="label">Slunce</div>
+      <div class="value"><span data-field="illuminance">—</span><small>lx</small></div>
+      <div class="sub"><span data-field="irradiance">—</span> W/m² · UV <span data-field="uv">—</span></div>
+    </div>
+
+    <div class="card">
+      <div class="label">Vítr</div>
+      <div class="value wind">
+        <span class="arrow" data-field="windArrow">↑</span>
+        <span data-field="windSpeed">—</span><small data-field="windUnit">km/h</small>
+      </div>
+      <div class="sub"><span data-field="windDirection">—</span> · nárazy <span data-field="windGust">—</span></div>
+    </div>
+
+    <div class="card">
+      <div class="label">Déšť</div>
+      <div class="value"><span data-field="rainRate">—</span><small>mm/h</small></div>
+      <div class="sub">dnes <span data-field="rainToday">—</span> mm</div>
+    </div>
+  </section>
+
+  <footer class="status"><i></i><span data-field="status">připojuji k HA…</span></footer>
+</main>
+
+<div id="setup" hidden>
+  <h1>Dům 3D</h1>
+  <p id="setup-message"></p>
+</div>
+</body>
+</html>
