@@ -37,6 +37,26 @@ Znamená to: WebGL 2 ano, ale skromný výkon a fill-rate. Proto platí striktn�
 render on demand a `renderScale` pod 1 na velkých displejích. RAM hlídat (jen jedna
 stránka v kiosku, žádná rozšíření).
 
+Zjištění z `chrome://gpu` (Chromium 150):
+
+- **WebGL: Hardware accelerated** přes ANGLE → OpenGL ES (`GL_VERSION` OpenGL ES 3.0
+  → WebGL 2 k dispozici). ANGLE nejdřív zkouší desktop GL a selže; v kiosku proto
+  spouštět s `--use-angle=gles`, ušetří to chybu i čas při startu.
+- **Video decode: Software only.** Debianí Chromium na ARM nepoužije HW dekodér
+  RK3288 (VPU). Každý kamerový stream dekóduje CPU (4× Cortex-A17). Důsledky pro
+  pohled Kamery:
+  - v mřížce jen **snapshoty** (obnova po několika sekundách) nebo substream
+    v nízkém rozlišení (≤ 640×360),
+  - živý stream vždy jen **jedna** kamera (po kliknutí), ideálně substream H.264,
+  - nikdy ne víc živých 1080p streamů současně.
+- Aktivní workaround `exit_on_context_lost`: při nedostatku paměti GPU Chromium
+  WebGL kontext zahodí. Appka musí zachytit `webglcontextlost` a obnovit se
+  (reload), kiosk musí běžet pod dohledem, který ho při pádu znovu spustí.
+- Displej 1920×1080 @ 56,6 Hz. Strop je tedy ~56 fps, cílem je stabilních 30.
+
+Měření výkonu: `bench/index.html` (scéna ve stylu appky, automaticky změří
+fps při `renderScale` 1 / 0,75 / 0,5).
+
 Výkon celé věci stojí na GPU desky. Armbian 13 nese novou Mesu, takže:
 
 - **Mali G-series (RK3588 – Panthor, RK356x/H6/H616/S905X3 – Panfrost):** WebGL 2 v Chromiu funguje, low-poly scéna při 30–60 fps v pohodě.
