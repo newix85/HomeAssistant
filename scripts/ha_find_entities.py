@@ -6,8 +6,11 @@ Použití:
     export HA_TOKEN=...
     python3 scripts/ha_find_entities.py            # max. 12 kandidátů na roli
     python3 scripts/ha_find_entities.py --limit 0  # všichni kandidáti
+    python3 scripts/ha_find_entities.py --role rain --role wind_direction --limit 0
 
-★ = jméno napovídá venkovnímu/meteo senzoru. Skript jen čte, nic nemění.
+★ = jméno napovídá venkovnímu/meteo senzoru. „stáří“ = kdy entita naposledy
+něco nahlásila (last_reported); vysoké stáří prozradí mrtvou/zdvojenou kopii.
+Skript jen čte, nic nemění.
 """
 
 from __future__ import annotations
@@ -15,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import unicodedata
+from datetime import datetime, timezone
 
 import ha_client
 
@@ -65,12 +69,23 @@ def outdoor_score(state: dict) -> int:
     return sum(h in text for h in OUTDOOR_HINTS)
 
 
+def fmt_age(state: dict) -> str:
+    stamp = state.get("last_reported") or state.get("last_updated")
+    if not stamp:
+        return "?"
+    seconds = (datetime.now(timezone.utc) - datetime.fromisoformat(stamp)).total_seconds()
+    for unit, size in (("d", 86400), ("h", 3600), ("min", 60)):
+        if seconds >= size:
+            return f"{seconds / size:.0f} {unit}"
+    return f"{seconds:.0f} s"
+
+
 def fmt_state(state: dict) -> str:
     unit = state.get("attributes", {}).get("unit_of_measurement", "")
     return f"{state['state']} {unit}".strip()
 
 
-async def find(url: str, token: str, limit: int) -> None:
+async def find(url: str, token: str, limit: int, roles: list[str]) -> None:
     async with await ha_client.connect(url, token) as ws:
         await ws.send(json.dumps({"id": 1, "type": "get_states"}))
         while True:
@@ -81,6 +96,8 @@ async def find(url: str, token: str, limit: int) -> None:
 
     print(f"Entit v HA: {len(states)}")
     for role, (title, classes, _) in ROLES.items():
+        if roles and role not in roles:
+            continue
         found = [s for s in states if matches(role, s)]
         # Venkovní napřed, pak nedostupné na konec, pak podle entity_id
         found.sort(key=lambda s: (-outdoor_score(s), s["state"] in ("unavailable", "unknown"), s["entity_id"]))
@@ -91,8 +108,10 @@ async def find(url: str, token: str, limit: int) -> None:
         for s in shown:
             star = "★" if outdoor_score(s) else " "
             name = s.get("attributes", {}).get("friendly_name", "")
-            print(f" {star} {s['entity_id']:<55} {fmt_state(s):>14}  {name}")
+            print(f" {star} {s['entity_id']:<55} {fmt_state(s):>14}  {fmt_age(s):>6}  {name}")
 
+    if roles:
+        return
     weather = sorted(s["entity_id"] for s in states if s["entity_id"].startswith("weather."))
     print(f"\n== Předpověď [weather.*]: {len(weather)} ==")
     for entity_id in weather:
@@ -105,8 +124,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ha_client.add_connection_args(parser)
     parser.add_argument("--limit", type=int, default=12, help="max. kandidátů na roli (0 = všichni)")
+    parser.add_argument("--role", action="append", choices=list(ROLES), default=[],
+                        help="jen tahle role (lze opakovat)")
     args = parser.parse_args()
-    ha_client.run(args.url, lambda url, token: find(url, token, args.limit))
+    ha_client.run(args.url, lambda url, token: find(url, token, args.limit, args.role))
 
 
 if __name__ == "__main__":
