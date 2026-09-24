@@ -64,6 +64,8 @@ Naměřeno na RK3288 (low-poly scéna, 7 draw callů, ~2 200 trojúhelníků):
 |---|---|---|---|
 | vsync (výchozí Chromium) | 21,9 fps | 22,4 fps | 26,8 fps |
 | unlimited (odesílání, ne vykreslení!) | 108,7 | (zaseknutí) | 382 |
+| vsync, HUD jen 2× za s | 21,9 | 28,2 | 37,3 |
+| paced (`--disable-gpu-vsync`) | 17,8 | 18,5 | 20,1 |
 
 Poučení z měření:
 
@@ -76,8 +78,16 @@ Poučení z měření:
   polovinu (~22–28). Upřesní měření času GPU.
 - Kompozitor xfwm4 výkon měřitelně nebere, nechat zapnutý (bez vsync v Chromiu
   zajistí obraz bez trhání).
-- Kandidát pro kiosk: `--disable-gpu-vsync` **bez** `--disable-frame-rate-limit`
-  (režim `paced`): Chromium dál časuje snímky, GPU neblokuje na vblank.
+- Režim `paced` (`--disable-gpu-vsync`) je na desce **horší** než výchozí vsync,
+  nepoužívat.
+- **Změna DOM každý snímek je drahá**: zpomalení HUDu na 2× za sekundu zvedlo
+  fps o 25–40 %. Overlaye appky aktualizovat nejvýš 1–2× za sekundu.
+- Model z měření ve vsync: snímek ≈ **20 ms pevně** (skládání 1920×1080 v Chromiu
+  a xfwm4) **+ ~12 ms na megapixel** 3D plátna. Brzdí propustnost paměti
+  (každá kopie celé obrazovky ~16 MB), ne složitost scény. Zrychlení tedy přes
+  méně celoobrazovkových kopií, ne přes jednodušší 3D.
+- `EXT_disjoint_timer_query_webgl2` Chromium nabízí, ale Panfrost vrací 0, takže
+  čas GPU přímo měřit nejde.
 - Teplota při trvalé animaci stoupla na 65–69 °C → appka musí kreslit jen při
   změně a animace omezit (cíl 28 fps = polovina 56,6 Hz, rovnoměrně).
 

@@ -23,6 +23,7 @@
 // Benchmark scény ve stylu aplikace: low-poly dům, gradientová obloha, Lambert, bez stínů.
 // Parametry URL: ?scale=0.75 (pevné rozlišení, bez auto testu) &aa=1 (MSAA) &trees=40
 //                &steps=0.5,1,0.75 (pořadí kroků auto testu)
+//                &desync=1 (WebGL kontext s desynchronized: méně skládání v Chromiu)
 import * as THREE from 'three';
 
 const params = new URLSearchParams(location.search);
@@ -33,9 +34,15 @@ const STEPS = fixedScale ? [fixedScale]
   : params.has('steps') ? params.get('steps').split(',').map(Number) : [1, 0.75, 0.5];
 const WARMUP_MS = 2000, MEASURE_MS = 8000;
 
-const renderer = new THREE.WebGLRenderer({ antialias, powerPreference: 'high-performance' });
-document.body.appendChild(renderer.domElement);
+const desync = params.get('desync') === '1';
+const canvas = document.createElement('canvas');
+const context = canvas.getContext('webgl2', {
+  antialias, alpha: false, desynchronized: desync, powerPreference: 'high-performance',
+});
+const renderer = new THREE.WebGLRenderer({ canvas, context, antialias });
+document.body.appendChild(canvas);
 const gl = renderer.getContext();
+console.log('bench-attrs ' + JSON.stringify(gl.getContextAttributes()));
 const dbg = gl.getExtension('WEBGL_debug_renderer_info');
 const glRenderer = gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : gl.RENDERER);
 console.log('bench-gpu ' + glRenderer);
@@ -137,7 +144,8 @@ function pollQueries() {
 }
 
 const median = (xs) => {
-  if (!xs.length) return null;
+  // Některé ovladače (Panfrost) rozšíření nabízí, ale vrací samé nuly
+  if (!xs.length || xs.every((x) => x === 0)) return null;
   const sorted = [...xs].sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length / 2)];
 };

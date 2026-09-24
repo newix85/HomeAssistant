@@ -34,7 +34,8 @@ cleanup() {
   [ -n "$BROWSER" ] && kill "$BROWSER" 2>/dev/null
   [ -n "$SERVER" ] && kill "$SERVER" 2>/dev/null
   wait 2>/dev/null
-  rm -rf "$WORK"
+  # podprocesy Chromia mohou do profilu chvíli ještě zapisovat
+  for _ in 1 2 3 4 5; do rm -rf "$WORK" 2>/dev/null && break; sleep 1; done
 }
 trap cleanup EXIT
 trap 'exit 130' INT TERM
@@ -113,6 +114,10 @@ rows = [json.loads(m) for m in re.findall(r'"bench (\{.*?\})", source', log)]
 
 print("\n== Výsledky benchmarku (%s%s) ==" % (mode, ", " + query if query else ""))
 print("GPU: " + (gpu.group(1) if gpu else "?"))
+attrs = re.search(r'"bench-attrs (\{.*?\})", source', log)
+if attrs:
+    a = json.loads(attrs.group(1))
+    print("Kontext: antialias=%s, desynchronized=%s" % (a.get("antialias"), a.get("desynchronized")))
 if not rows:
     console = re.findall(r'INFO:CONSOLE[^\]]*\] "(.*?)", source', log)
     print("Žádné výsledky. Hlášky stránky:" if console else "Žádné výsledky ani hlášky stránky. Konec logu:")
@@ -121,7 +126,7 @@ for r in rows:
     gpu_ms = "n/a" if r.get("gpuMs") is None else "%.1f ms" % r["gpuMs"]
     print("scale %.2f  %10s  %6.1f fps  p95 %6.1f ms  GPU %s" % (r["scale"], r["res"], r["fps"], r["p95"], gpu_ms))
 if rows:
-    print("(GPU = medián času kreslení naší scény na GPU; n/a = prohlížeč měření nepodporuje)")
+    print("(GPU = medián času kreslení naší scény na GPU; n/a = prohlížeč/ovladač neměří)")
 
 stalls = [json.loads(m) for m in re.findall(r'"bench-stall (\{.*?\})", source', log)]
 if stalls:
