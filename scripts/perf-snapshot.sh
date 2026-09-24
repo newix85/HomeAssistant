@@ -32,7 +32,11 @@ done
 
 section "Kompozitor XFCE (xfwm4)"
 xml=$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml
-if [ -r "$xml" ] && grep -q 'name="use_compositing"' "$xml"; then
+live=$(DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/$(id -u)/bus} \
+       xfconf-query -c xfwm4 -p /general/use_compositing 2>/dev/null)
+if [ -n "$live" ]; then
+  echo "use_compositing = $live"
+elif [ -r "$xml" ] && grep -q 'name="use_compositing"' "$xml"; then
   grep -o 'name="use_compositing"[^>]*' "$xml"
 else
   echo "use_compositing není nastaveno -> výchozí (zapnuto)"

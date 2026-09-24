@@ -5,5 +5,5 @@ Pohledy: dům a počasí, průřez domem, zahrada, kamery, energie (FVE).
 
 - Platforma a zdůvodnění: [docs/platform.md](docs/platform.md)
 - Kontrola zařízení: `bash scripts/check-armbian.sh`
-- Test výkonu 3D: `python3 -m http.server 8000` v kořeni repa → `http://localhost:8000/bench/`
+- Test výkonu 3D (na desce, výsledky do terminálu): `bash scripts/run-bench.sh` (`VSYNC=1` = s vsync)
 - Zátěž z HA (změny/s, nejhlučnější entity): `HA_URL=… HA_TOKEN=… python3 scripts/ha_event_rate.py [--label dum3d]`
