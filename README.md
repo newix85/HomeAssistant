@@ -5,3 +5,4 @@ Pohledy: dům a počasí, průřez domem, zahrada, kamery, energie (FVE).
 
 - Platforma a zdůvodnění: [docs/platform.md](docs/platform.md)
 - Kontrola zařízení: `bash scripts/check-armbian.sh`
+- Zátěž z HA (změny/s, nejhlučnější entity): `HA_URL=… HA_TOKEN=… python3 scripts/ha_event_rate.py`

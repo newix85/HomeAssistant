@@ -48,6 +48,31 @@ Ověření na zařízení: `scripts/check-armbian.sh` a v Chromiu stránka `chro
 5. Low-poly modely, jeden GLB na pohled, komprese meshopt, textury max. 1024 px (KTX2, pokud GPU zvládne).
 6. Kamery vždy jen **aktivní pohled** – stream se zastaví při odchodu z pohledu.
 
+## Datový tok z HA (proč to nemá sekat jako Lovelace v kiosku)
+
+Standardní HA frontend odebírá **všechny** entity. Každá změna (i jen atributu) přepíše
+globální objekt `hass` a spustí přepočet všech karet. Při stovkách entit a senzorech
+s aktualizacemi po sekundách (výkony, RSSI, …) je hlavní vlákno prohlížeče pořád zahlcené.
+Chromium za to nemůže, dělá to ten vzor. Tady to řešíme takhle:
+
+1. **Explicitní whitelist entit** v konfiguraci. Odběr jen přes
+   `subscribe_entities` s parametrem `entity_ids` (filtr probíhá **na straně HA**,
+   ostatní entity po síti vůbec nepřijdou).
+2. **Store mimo vykreslování**: příchozí změny se jen zapíšou do mapy
+   (`entity_id → stav`), nic dalšího se nespouští.
+3. **Dávkování**: překreslení nejvýš jednou za snímek (`requestAnimationFrame`),
+   pro číselné overlaye stačí jednou za 1 s.
+4. **Mrtvé pásmo**: změna, která se po zaokrouhlení na zobrazenou přesnost
+   neprojeví (např. 1 234,4 W → 1 234,6 W při zobrazení v kW), nic nespustí.
+5. **Jen aktivní pohled**: entity neaktivních pohledů se ukládají, ale
+   nepřekreslují se. Kamery a grafy se mimo pohled zastaví.
+6. **Historie až na vyžádání** (`history/stream` pro jeden graf), žádné
+   trvalé odebírání historie.
+
+Diagnostika: `scripts/ha_event_rate.py` změří, kolik změn za sekundu HA posílá
+a které entity jsou nejhlučnější. U těch se vyplatí snížit frekvenci
+aktualizací už v HA (interval pollingu integrace, `throttle`/filtr senzoru).
+
 ## Pohledy (mapa na architekturu)
 
 Každý pohled = jedna „scéna“ se sdíleným rendererem a sdíleným HA stavem:
