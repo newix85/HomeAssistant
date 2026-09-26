@@ -1,13 +1,33 @@
-// Pozemek kolem domu: FVE na střeše, plot s FVE (východ/západ), terasa s vířivkou
-// a pergolou s FVE, baterie terasy, přípojka 3 fází ze sloupu.
-// Souřadnice: sever = -z (vzadu), jih = +z (vpředu), východ = +x. Dům 12 × 8 m ve středu.
+// Pozemek: dům dole pod kopcem, za ním stoupá svah (sever). Po stranách pozemku
+// vede plot do kopce, na něm FVE východ (HMS-2000 left) a západ (HMS-2000 right).
+// Na vrcholu altán s vířivkou, FVE na jeho střeše (Anenji) a baterie vedle.
+// Vpředu sloup s přípojkou 3 fází (Shelly EM3), na jižní střeše domu FVE (Solax).
+// Souřadnice: sever = -z (do kopce), jih = +z (ke kameře), východ = +x.
+// Dům 12 × 8 m ve středu, přízemí na úrovni y = 0.
 
 import * as THREE from 'three';
 
 const lambert = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
+const smoothstep = (a, b, x) => {
+  const t = Math.min(Math.max((x - a) / (b - a), 0), 1);
+  return t * t * (3 - 2 * t);
+};
 
-// Plot: obdélník kolem domu
-const PLOT = { west: -16, east: 16, north: -18, south: 12 };
+// Kopec za domem
+// (musí klesnout na 0 uvnitř jemné mřížky terénu ve scene.js: x ±60, z −80…40)
+const HILL = { height: 7, riseFrom: -6, riseTo: -24, fallFrom: -52, fallTo: -77, halfWidth: 30, edge: 25 };
+
+/** Výška terénu v bodě (x, z). Rovina kolem domu, za ním svah a plató na vrcholu. */
+export function terrainHeight(x, z) {
+  const up = smoothstep(HILL.riseFrom, HILL.riseTo, z);             // svah za domem
+  const down = 1 - smoothstep(HILL.fallFrom, HILL.fallTo, z);       // daleko za vrcholem zase dolů
+  const side = 1 - smoothstep(HILL.halfWidth, HILL.halfWidth + HILL.edge, Math.abs(x));
+  return HILL.height * up * down * side;
+}
+
+// Pozemek (plot): od přední strany až na vrchol kopce
+const PLOT = { west: -16, east: 16, north: -36, south: 12, gate: [-2, 2] };
+const ALTAN = { x: 2, z: -29 };
 
 const PANEL_COLOR = new THREE.Color('#1d2b4a');
 const PANEL_GLOW = new THREE.Color('#58b4ff');
@@ -22,13 +42,15 @@ function panelMaterial() {
   return new THREE.MeshLambertMaterial({ color: PANEL_COLOR, emissive: new THREE.Color('#000000') });
 }
 
-/** Instancované panely: jeden draw call na pole FVE. */
-function panelArray(geometry, material, placements) {
+/** Instancované objekty: jeden draw call na skupinu. placements: { position, rotation?, scale? } */
+function instanced(geometry, material, placements) {
   const mesh = new THREE.InstancedMesh(geometry, material, placements.length);
   const dummy = new THREE.Object3D();
-  placements.forEach(({ position, rotation }, i) => {
+  placements.forEach(({ position, rotation, scale, lookAt }, i) => {
     dummy.position.copy(position);
     dummy.rotation.copy(rotation ?? new THREE.Euler());
+    if (lookAt) dummy.lookAt(lookAt);
+    dummy.scale.copy(scale ?? new THREE.Vector3(1, 1, 1));
     dummy.updateMatrix();
     mesh.setMatrixAt(i, dummy.matrix);
   });
@@ -47,12 +69,12 @@ export class Property {
 
     this.#buildRoofPv();
     this.#buildFence();
-    this.#buildTerrace();
+    this.#buildAltan();
     this.#buildGridConnection();
   }
 
   #buildRoofPv() {
-    // Jižní střešní rovina: od okapu (y 6, z 4.6) k hřebeni (y 9.4, z 0)
+    // Jižní střešní rovina: od hřebene (y 9.4, z 0) k okapu (y 6, z 4.6)
     const tilt = Math.atan2(3.4, 4.6);
     const down = new THREE.Vector3(0, -Math.sin(tilt), Math.cos(tilt)); // po spádu dolů
     const normal = new THREE.Vector3(0, Math.cos(tilt), Math.sin(tilt));
@@ -65,115 +87,105 @@ export class Property {
         placements.push({ position: p, rotation: new THREE.Euler(tilt, 0, 0) });
       }
     }
-    this.group.add(panelArray(new THREE.BoxGeometry(1.7, 0.06, 1.05), this.pvMaterials.house, placements));
+    this.group.add(instanced(new THREE.BoxGeometry(1.7, 0.06, 1.05), this.pvMaterials.house, placements));
     this.anchors.pvHouse = new THREE.Vector3(0, 9.8, 2.2);
   }
 
   #buildFence() {
     const wood = lambert('#8a6a4a');
-    const { west, east, north, south } = PLOT;
+    const { west, east, north, south, gate } = PLOT;
+    const ground = (x, z, dy) => new THREE.Vector3(x, terrainHeight(x, z) + dy, z);
     const posts = [];
     const rails = [];
-    const side = (x1, z1, x2, z2, gapFrom = null, gapTo = null) => {
-      const len = Math.hypot(x2 - x1, z2 - z1);
-      const n = Math.round(len / 2.5);
+
+    // Strana plotu = řada sloupků po terénu; latě spojují sousední sloupky
+    const side = (x1, z1, x2, z2) => {
+      const n = Math.max(1, Math.round(Math.hypot(x2 - x1, z2 - z1) / 2.5));
+      const points = [];
       for (let i = 0; i <= n; i++) {
         const t = i / n;
         const x = x1 + (x2 - x1) * t, z = z1 + (z2 - z1) * t;
-        if (gapFrom !== null && x > gapFrom && x < gapTo) continue;
-        posts.push(new THREE.Vector3(x, 0.7, z));
+        points.push([x, z, x > gate[0] && x < gate[1] && z === south]);
       }
-      rails.push({ x1, z1, x2, z2, gapFrom, gapTo });
+      points.forEach(([x, z, inGate]) => { if (!inGate) posts.push({ position: ground(x, z, 0.7) }); });
+      for (let i = 0; i < n; i++) {
+        const [xa, za, ga] = points[i], [xb, zb, gb] = points[i + 1];
+        if (ga || gb) continue; // branka
+        for (const dy of [0.45, 1.2]) {
+          const a = ground(xa, za, dy), b = ground(xb, zb, dy);
+          rails.push({
+            position: a.clone().lerp(b, 0.5), lookAt: b, scale: new THREE.Vector3(1, 1, a.distanceTo(b)),
+          });
+        }
+      }
     };
-    side(west, south, east, south, -2, 2);   // vpředu branka
+    side(west, south, east, south);
     side(east, south, east, north);
     side(east, north, west, north);
     side(west, north, west, south);
 
-    this.group.add(panelArray(
-      new THREE.BoxGeometry(0.15, 1.4, 0.15), wood, posts.map((position) => ({ position })),
-    ));
+    this.group.add(instanced(new THREE.BoxGeometry(0.15, 1.4, 0.15), wood, posts));
+    this.group.add(instanced(new THREE.BoxGeometry(0.06, 0.08, 1), wood, rails));
 
-    const railGeo = new THREE.BoxGeometry(1, 0.08, 0.06);
-    const railPlacements = [];
-    for (const { x1, z1, x2, z2, gapFrom, gapTo } of rails) {
-      const segments = gapFrom === null ? [[x1, x2]] : [[x1, gapFrom], [gapTo, x2]];
-      for (const [a, b] of segments) {
-        const len = Math.hypot(b - a, z2 - z1);
-        const cx = (a + b) / 2, cz = (z1 + z2) / 2;
-        const angle = Math.atan2(-(z2 - z1), b - a);
-        for (const y of [0.45, 1.2]) {
-          railPlacements.push({ position: new THREE.Vector3(cx, y, cz), rotation: new THREE.Euler(0, angle, 0), len });
-        }
-      }
-    }
-    const railMesh = new THREE.InstancedMesh(railGeo, wood, railPlacements.length);
-    const dummy = new THREE.Object3D();
-    railPlacements.forEach(({ position, rotation, len }, i) => {
-      dummy.position.copy(position);
-      dummy.rotation.copy(rotation);
-      dummy.scale.set(len, 1, 1);
-      dummy.updateMatrix();
-      railMesh.setMatrixAt(i, dummy.matrix);
-    });
-    this.group.add(railMesh);
-
-    // FVE na plotu: 4 svislé panely na každé straně (HMS-2000 = 4 panely)
+    // FVE na plotu do kopce: 4 svislé panely na každé straně (HMS-2000 = 4 panely)
     const panelGeo = new THREE.BoxGeometry(0.06, 1.7, 1.05);
-    const fencePanels = (x) => [3.2, 4.4, 5.6, 6.8].map((z) => ({
-      position: new THREE.Vector3(x, 1.05, z),
-    }));
-    this.group.add(panelArray(panelGeo, this.pvMaterials.east, fencePanels(east + 0.12)));
-    this.group.add(panelArray(panelGeo, this.pvMaterials.west, fencePanels(west - 0.12)));
-    this.anchors.pvEast = new THREE.Vector3(east, 2.4, 5);
-    this.anchors.pvWest = new THREE.Vector3(west, 2.4, 5);
+    const fencePanels = (x) => [-9, -10.2, -11.4, -12.6].map((z) => ({ position: ground(x, z, 1.05) }));
+    this.group.add(instanced(panelGeo, this.pvMaterials.east, fencePanels(east + 0.12)));
+    this.group.add(instanced(panelGeo, this.pvMaterials.west, fencePanels(west - 0.12)));
+    this.anchors.pvEast = ground(east, -10.8, 2.6);
+    this.anchors.pvWest = ground(west, -10.8, 2.6);
   }
 
-  #buildTerrace() {
-    // Terasa za domem (dům končí na z = -4)
-    const deck = new THREE.Mesh(new THREE.BoxGeometry(14, 0.3, 8), lambert('#b08a62'));
-    deck.position.set(0, 0.15, -8.2);
-    this.group.add(deck);
+  #buildAltan() {
+    // Altán na vrcholu kopce: podlaha, sloupky, střecha s FVE, uvnitř vířivka
+    const { x: cx, z: cz } = ALTAN;
+    const base = terrainHeight(cx, cz);
 
-    // Vířivka
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(7, 0.3, 6), lambert('#b08a62'));
+    floor.position.set(cx, base + 0.15, cz);
+    this.group.add(floor);
+
+    const posts = [[-3.2, -2.7], [3.2, -2.7], [-3.2, 2.7], [3.2, 2.7]]
+      .map(([dx, dz]) => ({ position: new THREE.Vector3(cx + dx, base + 1.6, cz + dz) }));
+    this.group.add(instanced(new THREE.BoxGeometry(0.2, 2.6, 0.2), lambert('#6b5038'), posts));
+
     const tub = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.9, 20), lambert('#e9e4da'));
-    tub.position.set(3.6, 0.75, -8.4);
+    tub.position.set(cx, base + 0.75, cz);
     const water = new THREE.Mesh(new THREE.CircleGeometry(1.1, 20), new THREE.MeshBasicMaterial({ color: '#63c7e0' }));
     water.rotation.x = -Math.PI / 2;
-    water.position.set(3.6, 1.21, -8.4);
+    water.position.set(cx, base + 1.21, cz);
     this.group.add(tub, water);
 
-    // Pergola s FVE střechou (Anenji)
-    const postGeo = new THREE.BoxGeometry(0.18, 2.6, 0.18);
-    const postMat = lambert('#6b5038');
-    const pergolaPosts = [[0.4, -5.2], [6.6, -5.2], [0.4, -11.2], [6.6, -11.2]]
-      .map(([x, z]) => ({ position: new THREE.Vector3(x, 1.6, z) }));
-    this.group.add(panelArray(postGeo, postMat, pergolaPosts));
-
-    const tilt = THREE.MathUtils.degToRad(8); // mírný sklon k jihu
+    // Střecha z panelů, mírně skloněná k jihu (ke kameře)
+    const tilt = THREE.MathUtils.degToRad(10);
     const roofPanels = [];
-    for (const z of [-10.4, -9.3, -8.2, -7.1, -6.0]) {
-      for (const x of [1.2, 2.7, 4.2, 5.7]) {
-        roofPanels.push({ position: new THREE.Vector3(x, 2.95 + (z + 8.2) * -0.07, z), rotation: new THREE.Euler(tilt, 0, 0) });
+    for (const dz of [-2.3, -1.15, 0, 1.15, 2.3]) {
+      for (const dx of [-2.3, -0.8, 0.7, 2.2]) {
+        roofPanels.push({
+          position: new THREE.Vector3(cx + dx, base + 3.1 - dz * Math.tan(tilt), cz + dz),
+          rotation: new THREE.Euler(tilt, 0, 0),
+        });
       }
     }
-    this.group.add(panelArray(new THREE.BoxGeometry(1.45, 0.06, 1.05), this.pvMaterials.terrace, roofPanels));
-    this.anchors.pvTerrace = new THREE.Vector3(3.5, 3.6, -8.2);
+    this.group.add(instanced(new THREE.BoxGeometry(1.45, 0.06, 1.1), this.pvMaterials.terrace, roofPanels));
+    this.anchors.pvTerrace = new THREE.Vector3(cx, base + 4.2, cz);
 
-    // Baterie terasy: skříňka s ukazatelem nabití na přední straně
+    // Baterie vedle altánu: skříňka s ukazatelem nabití na přední (jižní) straně
+    const bx = cx + 4.6, bz = cz + 2;
+    const bBase = terrainHeight(bx, bz);
     const cabinet = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.3, 0.5), lambert('#d8dde3'));
-    cabinet.position.set(8, 0.65, -6.2);
+    cabinet.position.set(bx, bBase + 0.65, bz);
     this.group.add(cabinet);
     this.socBarMaterial = new THREE.MeshBasicMaterial({ color: '#5fd38a' });
     this.socBar = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 1), this.socBarMaterial);
-    this.socBarBase = 0.15; // spodní okraj ukazatele (y)
-    this.socBar.position.set(8, 0.6, -5.94);
+    this.socBarBase = bBase + 0.15; // spodní okraj ukazatele (y)
+    this.socBar.position.set(bx, bBase + 0.6, bz + 0.26);
     this.group.add(this.socBar);
-    this.anchors.battery = new THREE.Vector3(8, 1.7, -6.2);
+    this.anchors.battery = new THREE.Vector3(bx + 0.6, bBase + 1.8, bz);
   }
 
   #buildGridConnection() {
-    // Sloup vpředu za plotem, tři kabely do přípojkové skříně na přední stěně
+    // Sloup vpředu za plotem, tři kabely do přípojkové skříně na přední stěně domu
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 8.5, 8), lambert('#7a6a58'));
     pole.position.set(-5, 4.25, 17);
     const arm = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 0.12), lambert('#7a6a58'));

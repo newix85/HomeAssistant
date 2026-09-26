@@ -2,7 +2,7 @@
 // Kreslí se jen na vyžádání (requestRender), žádná trvalá smyčka.
 
 import * as THREE from 'three';
-import { Property } from './property.js';
+import { Property, terrainHeight } from './property.js';
 
 // Barvy oblohy [zenit, horizont] podle výšky slunce nad obzorem (°)
 const SKY_KEYS = [
@@ -59,10 +59,10 @@ export class HouseScene {
 
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog('#cfe6ff', 70, 330);
-    // Od jihovýchodu: vidět obloha, střecha s FVE, oba ploty i terasa za domem
-    this.camera = new THREE.PerspectiveCamera(44, 1, 0.5, 600);
-    this.camera.position.set(28, 15, 30);
-    this.camera.lookAt(-1, 3.5, -4);
+    // Zepředu mírně z východu: dům, oba ploty do kopce, altán na vrcholu a nebe
+    this.camera = new THREE.PerspectiveCamera(46, 1, 0.5, 600);
+    this.camera.position.set(12, 22, 44);
+    this.camera.lookAt(0, 3, -14);
 
     this.#buildSky();
     this.#buildLights();
@@ -127,10 +127,21 @@ export class HouseScene {
   }
 
   #buildGround() {
-    // Zem sahá skoro k obloze a mlha v barvě obzoru skryje její okraj
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(380, 48), lambert('#7fae5a'));
-    ground.rotation.x = -Math.PI / 2;
-    this.scene.add(ground);
+    const grass = lambert('#7fae5a');
+    // Okolí pozemku s kopcem: mřížka 1,5 m, výška z terrainHeight()
+    const patch = new THREE.PlaneGeometry(120, 120, 80, 80);
+    patch.rotateX(-Math.PI / 2);
+    patch.translate(0, 0, -20);
+    const pos = patch.attributes.position;
+    for (let i = 0; i < pos.count; i++) pos.setY(i, terrainHeight(pos.getX(i), pos.getZ(i)));
+    patch.computeVertexNormals();
+    this.scene.add(new THREE.Mesh(patch, grass));
+
+    // Rovná zem do dálky; mlha v barvě obzoru skryje její okraj
+    const far = new THREE.Mesh(new THREE.CircleGeometry(380, 48), grass);
+    far.rotation.x = -Math.PI / 2;
+    far.position.y = -0.03;
+    this.scene.add(far);
   }
 
   #buildHouse() {
@@ -160,18 +171,22 @@ export class HouseScene {
   }
 
   #buildTrees() {
-    const count = 24;
+    const count = 30;
     const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.25, 0.35, 2, 6), lambert('#6b4a2f'), count);
     const crowns = new THREE.InstancedMesh(new THREE.ConeGeometry(1.6, 4, 7), lambert('#3f7d3a'), count);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion();
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + (i % 3) * 0.3;
-      const r = 27 + ((i * 37) % 36); // za plotem
+    let placed = 0;
+    for (let i = 0; placed < count && i < 500; i++) {
+      const a = i * 2.39996; // zlatý úhel: rovnoměrně, deterministicky
+      const r = 22 + ((i * 37) % 48);
+      const x = Math.cos(a) * r, z = Math.sin(a) * r - 12;
+      if (x > -19 && x < 19 && z > -39 && z < 15) continue; // ne na pozemku
       const s = 0.7 + ((i * 13) % 10) / 15;
-      const x = Math.cos(a) * r, z = Math.sin(a) * r;
+      const y = terrainHeight(x, z);
       const scale = new THREE.Vector3(s, s, s);
-      trunks.setMatrixAt(i, m.compose(new THREE.Vector3(x, s, z), q, scale));
-      crowns.setMatrixAt(i, m.compose(new THREE.Vector3(x, 3.8 * s, z), q, scale));
+      trunks.setMatrixAt(placed, m.compose(new THREE.Vector3(x, y + s, z), q, scale));
+      crowns.setMatrixAt(placed, m.compose(new THREE.Vector3(x, y + 3.8 * s, z), q, scale));
+      placed++;
     }
     this.scene.add(trunks, crowns);
   }
