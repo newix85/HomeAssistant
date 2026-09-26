@@ -85,7 +85,7 @@ export class Irrigation {
   #render() {
     this.q('[data-irrigation=status]').textContent = this.#statusText();
     const zone = this.#get('irrigationActiveZone');
-    const zoneText = zone && !NOT_RUNNING.has(zone.state) ? zone.state : '—';
+    const zoneText = zone && !NOT_RUNNING.has(zone.state.toLowerCase()) ? zone.state : '—';
     this.q('[data-irrigation=active]').textContent = zoneText;
 
     const p = numericState(this.#get('irrigationProgress'));
@@ -117,7 +117,14 @@ export class Irrigation {
     box.dataset.key = key;
     box.replaceChildren(...options.map((option) => {
       const button = document.createElement('button');
-      button.textContent = option;
+      // „stromky (Point)“ -> název + menší typ
+      const [, name, kind] = option.match(/^(.*?)\s*\(([^)]*)\)\s*$/) ?? [null, option, null];
+      button.append(name);
+      if (kind) {
+        const small = document.createElement('small');
+        small.textContent = kind;
+        button.append(small);
+      }
       button.classList.toggle('selected', option === entity.state);
       button.addEventListener('click', () => this.#call(`Nastavuji ${option}…`, 'select', 'select_option', {
         entity_id: this.e[role], option,

@@ -48,15 +48,19 @@ if pgrep -x chromium >/dev/null; then
 fi
 if ss -ltn 2>/dev/null | grep -q "[:.]$PORT "; then
   pkill -f "http.server $PORT"
+  pkill -f "serve.py --port $PORT"
   sleep 1
 fi
 
-python3 -m http.server "$PORT" --bind 127.0.0.1 --directory app >/dev/null 2>&1 &
+python3 scripts/serve.py --port "$PORT" --bind 127.0.0.1 --directory app >/dev/null 2>&1 &
 SERVER=$!
 sleep 1
-kill -0 "$SERVER" 2>/dev/null || { echo "http.server na portu $PORT nenaběhl."; exit 1; }
+kill -0 "$SERVER" 2>/dev/null || { echo "Server appky na portu $PORT nenaběhl."; exit 1; }
 
 mkdir -p "$PROFILE_DIR"
+# HTTP cache profilu pryč: po git pull se nesmí míchat staré a nové soubory
+# (server už posílá no-cache, tohle smaže i to, co se nacachovalo dřív)
+rm -rf "$PROFILE_DIR/Default/Cache"
 FLAGS=(--kiosk --no-first-run --no-default-browser-check --noerrdialogs
        --disable-session-crashed-bubble --disable-infobars --use-angle=gles
        --user-data-dir="$PROFILE_DIR" --enable-logging=stderr --v=0)
