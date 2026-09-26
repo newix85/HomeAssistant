@@ -75,8 +75,11 @@ export class Overlay {
       return '—';
     }
     node?.classList.remove('missing');
+    // Ztlumení starých dat jen když je zapnuté: stálé hodnoty (v noci 0 W, 0 lx)
+    // HA neaktualizuje, takže „dlouho beze změny“ neznamená mrtvý senzor.
     const age = Date.now() / 1000 - entity.lastUpdated;
-    const stale = age > (this.config.staleMinutes ?? 30) * 60;
+    const limit = this.config.staleMinutes;
+    const stale = Boolean(limit) && age > limit * 60;
     node?.classList.toggle('stale', stale);
     if (node) node.title = stale ? `data ${formatAge(age)}` : '';
     return formatNumber(n, decimals);
@@ -136,7 +139,11 @@ export class Overlay {
     this.#set('rainToday', this.#value('rainToday', 1));
 
     for (const role of ['pvHouse', 'pvEast', 'pvWest', 'pvTerrace', 'pvTotal']) {
-      this.#set(role, formatPower(this.#power(role)));
+      // Měniče (např. HMS-2000) se v noci vypínají a HA je hlásí jako nedostupné
+      const state = this.#entity(role)?.state;
+      const offline = state === 'unavailable' || state === 'unknown';
+      const power = this.#power(role);
+      this.#set(role, offline ? 'offline' : formatPower(power));
     }
     const phases = PHASE_ROLES.map((role) => this.#power(role));
     phases.forEach((w, i) => this.#set(PHASE_ROLES[i], formatPower(w)));

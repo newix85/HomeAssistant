@@ -4,7 +4,7 @@
     "token": "VLOZ_SEM_TOKEN"
   },
   "renderScale": 0.75,
-  "staleMinutes": 30,
+  "staleMinutes": null,
   "pressureAltitudeM": 170,
   "entities": {
     "sun": "sun.sun",
