@@ -10,6 +10,14 @@ cp app/config.example.json app/config.json   # doplnit ha.url a ha.token
 bash scripts/run-app.sh
 ```
 
+Trvalý kiosk (autostart po přihlášení, restart po pádu, bez zhasínání a klávesnice Onboard):
+
+```bash
+bash scripts/install-kiosk.sh            # nastavit (vrácení: --remove)
+pkill -f scripts/kiosk.sh; pkill -x chromium   # zastavit běžící kiosk
+tail -f ~/.cache/dum3d/kiosk.log         # log kiosku a hlášky stránky
+```
+
 `app/config.json` obsahuje token, je v `.gitignore` a **nikdy se necommituje** (repo je veřejné).
 
 ## Dokumentace a nástroje
