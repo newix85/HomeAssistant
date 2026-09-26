@@ -242,6 +242,24 @@ export class HouseScene {
     return out;
   }
 
+  setIrrigation(running) {
+    if (this.property.setIrrigation(running)) this.requestRender();
+  }
+
+  /**
+   * Co je pod bodem obrazovky (CSS px)? Vrací název klikacího objektu, nebo null.
+   * Hledá se jen v objektech s userData.clickable (zavlažovač apod.).
+   */
+  pick(clientX, clientY) {
+    const ndc = new THREE.Vector2((clientX / innerWidth) * 2 - 1, -(clientY / innerHeight) * 2 + 1);
+    this.raycaster ??= new THREE.Raycaster();
+    this.raycaster.setFromCamera(ndc, this.camera);
+    const clickable = [];
+    this.property.group.traverse((o) => { if (o.userData.clickable) clickable.push(o); });
+    const hit = this.raycaster.intersectObjects(clickable, false)[0];
+    return hit?.object.userData.clickable ?? null;
+  }
+
   setEnergy(energy) {
     if (this.property.setEnergy(energy)) this.requestRender();
   }

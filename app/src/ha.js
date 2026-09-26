@@ -6,6 +6,7 @@ const PING_INTERVAL_MS = 30_000;
 const PONG_TIMEOUT_MS = 10_000;
 const RECONNECT_MIN_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
+const CALL_TIMEOUT_MS = 10_000;
 
 export function wsUrl(httpUrl) {
   return httpUrl.replace(/\/+$/, '').replace(/^http/, 'ws') + '/api/websocket';
@@ -29,6 +30,8 @@ export class HAClient {
     Object.assign(this, { url, token, entityIds, onStates, onStatus });
     /** @type {Map<string, EntityState>} */
     this.states = new Map();
+    /** Čekající volání služeb: id -> { resolve, reject } */
+    this.pending = new Map();
     this.nextId = 1;
     this.retryMs = RECONNECT_MIN_MS;
     this.stopped = false;
@@ -55,7 +58,30 @@ export class HAClient {
   }
 
   #send(msg) {
-    if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(msg));
+    if (this.ws?.readyState !== WebSocket.OPEN) return false;
+    this.ws.send(JSON.stringify(msg));
+    return true;
+  }
+
+  /**
+   * Zavolá službu HA, např. callService('button', 'press', { entity_id: 'button.x' }).
+   * @returns {Promise<unknown>} výsledek; při chybě HA, odpojení nebo timeoutu reject
+   */
+  callService(domain, service, serviceData = {}) {
+    const id = this.nextId++;
+    if (!this.#send({ id, type: 'call_service', domain, service, service_data: serviceData })) {
+      return Promise.reject(new Error('HA není připojeno'));
+    }
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error('HA neodpověděl včas'));
+      }, CALL_TIMEOUT_MS);
+      this.pending.set(id, {
+        resolve: (value) => { clearTimeout(timer); resolve(value); },
+        reject: (error) => { clearTimeout(timer); reject(error); },
+      });
+    });
   }
 
   #onMessage(msg) {
@@ -81,8 +107,16 @@ export class HAClient {
       case 'event':
         if (msg.id === this.subscriptionId) this.#applyEvent(msg.event);
         return;
-      case 'result':
-        if (!msg.success) console.warn('HA chyba', msg.id, msg.error);
+      case 'result': {
+        const call = this.pending.get(msg.id);
+        if (call) {
+          this.pending.delete(msg.id);
+          if (msg.success) call.resolve(msg.result);
+          else call.reject(new Error(msg.error?.message ?? 'HA vrátil chybu'));
+        } else if (!msg.success) {
+          console.warn('HA chyba', msg.id, msg.error);
+        }
+      }
     }
   }
 
@@ -136,6 +170,8 @@ export class HAClient {
     if (ws !== this.ws) return;
     clearInterval(this.pingTimer);
     clearTimeout(this.pongTimer);
+    for (const call of this.pending.values()) call.reject(new Error('spojení s HA se přerušilo'));
+    this.pending.clear();
     if (this.stopped) return;
     this.onStatus('disconnected', `nové spojení za ${Math.round(this.retryMs / 1000)} s`);
     this.reconnectTimer = setTimeout(() => this.#connect(), this.retryMs);

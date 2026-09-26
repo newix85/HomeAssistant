@@ -32,6 +32,10 @@
   <div class="tag pv" data-anchor="pvWest"><b data-field="pvWest">—</b><span>plot západ</span></div>
   <div class="tag pv" data-anchor="pvTerrace"><b data-field="pvTerrace">—</b><span>terasa</span></div>
   <div class="tag battery" data-anchor="battery"><b><span data-field="terraceBattery">—</span> %</b><span>baterie</span></div>
+  <div class="tag irrigation clickable" data-anchor="sprinkler" role="button">
+    <b data-irrigation="status">—</b><span>zavlažování</span>
+    <i class="bar"><i data-irrigation="bar"></i></i>
+  </div>
   <div class="tag phases" data-anchor="phases">
     <span>L1 <b data-field="phaseA">—</b></span>
     <span>L2 <b data-field="phaseB">—</b></span>
@@ -74,6 +78,35 @@
 
   <footer class="status"><i></i><span data-field="status">připojuji k HA…</span></footer>
 </main>
+
+<section id="irrigation-panel" class="panel" hidden>
+  <header>
+    <h2>Zavlažování</h2>
+    <button class="close" data-action="close" aria-label="Zavřít">✕</button>
+  </header>
+  <div class="panel-body">
+    <div class="map">
+      <img data-irrigation="map" alt="Mapa zón" hidden>
+      <p data-irrigation="map-missing">Mapa zón není k dispozici</p>
+    </div>
+    <div class="controls">
+      <div class="state">
+        <div><span class="label">Stav</span><b data-irrigation="status">—</b></div>
+        <div><span class="label">Aktivní zóna</span><b data-irrigation="active">—</b></div>
+        <i class="bar"><i data-irrigation="progress"></i></i>
+      </div>
+      <div class="label">Program</div>
+      <div class="choices" data-irrigation="zones"></div>
+      <div class="label">Síla zálivky</div>
+      <div class="choices" data-irrigation="doses"></div>
+      <div class="actions">
+        <button class="start" data-action="start">Spustit</button>
+        <button class="stop" data-action="stop">Zastavit</button>
+      </div>
+      <p class="note" data-irrigation="note"></p>
+    </div>
+  </div>
+</section>
 
 <div id="setup" hidden>
   <h1>Dům 3D</h1>

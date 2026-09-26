@@ -177,6 +177,13 @@ Každý pohled = jedna „scéna“ se sdíleným rendererem a sdíleným HA sta
    FVE na jižní střeše domu (Solax), přípojka 3 fází (Shelly EM3) ze sloupu vpředu.
    Terén je jedna výšková funkce `terrainHeight()`, podle které stojí plot, panely,
    altán i stromy.
+   **Zavlažování (IrriSense 2):** zavlažovač na svahu za domem (vedle domu, aby byl
+   z kamery vidět), při zalévání vodní vějíř a kruh postřiku po svahu, štítek se
+   stavem a průběhem. Klepnutí na zavlažovač nebo štítek otevře detail
+   (`app/src/irrigation.js`): mapa zón (`image.*` přes `entity_picture` z HA),
+   stav a aktivní zóna, volba programu a síly (`select.select_option`), Spustit /
+   Zastavit (`button.press`). Volání služeb čeká na potvrzení HA a ukáže
+   „Hotovo“ nebo chybu. Detail se po minutě nečinnosti zavře.
    Panely svítí podle podílu výkonu z `pvPeakW`, kabely se barví podle odběru
    (oranžová) nebo dodávky (zelená). Hodnoty ve štítcích přichycených k objektům.
 2. **Průřez domem** – clipping plane v Three.js, místnosti obarvené podle teploty/stavu

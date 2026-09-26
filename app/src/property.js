@@ -28,6 +28,7 @@ export function terrainHeight(x, z) {
 // Pozemek (plot): od přední strany až na vrchol kopce
 const PLOT = { west: -16, east: 16, north: -36, south: 12, gate: [-2, 2] };
 const ALTAN = { x: 2, z: -29 };
+const SPRINKLER = { x: 9, z: -15, radius: 6 }; // uprostřed svahu za domem, vedle něj (z kamery vidět)
 
 const PANEL_COLOR = new THREE.Color('#1d2b4a');
 const PANEL_GLOW = new THREE.Color('#58b4ff');
@@ -71,6 +72,7 @@ export class Property {
     this.#buildFence();
     this.#buildAltan();
     this.#buildGridConnection();
+    this.#buildSprinkler();
   }
 
   #buildRoofPv() {
@@ -210,6 +212,55 @@ export class Property {
     box.position.set(-3.5, 4.7, 4.1);
     this.group.add(box);
     this.anchors.phases = new THREE.Vector3(-5, 9.6, 17);
+  }
+
+  #buildSprinkler() {
+    const { x, z, radius } = SPRINKLER;
+    const base = terrainHeight(x, z);
+    const sprinkler = new THREE.Group();
+    sprinkler.position.set(x, base, z);
+
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 1.1, 8), lambert('#4a5560'));
+    pipe.position.y = 0.55;
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.25, 0.35, 10), lambert('#2f9e5b'));
+    head.position.y = 1.2;
+    sprinkler.add(pipe, head);
+
+    // Voda: vějíř a kruh postřiku, viditelné jen při zalévání
+    const water = new THREE.MeshBasicMaterial({
+      color: '#8fd8ff', transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide,
+    });
+    const spray = new THREE.Mesh(new THREE.ConeGeometry(radius * 0.55, 2.2, 20, 1, true), water);
+    spray.rotation.x = Math.PI; // špička dole u hlavice
+    spray.position.y = 2.25;
+    // Kruh postřiku kopíruje svah (jinak by se do kopce zanořil pod terén)
+    const wetGeo = new THREE.CircleGeometry(radius, 28, 0, Math.PI * 2);
+    wetGeo.rotateX(-Math.PI / 2);
+    const wetPos = wetGeo.attributes.position;
+    for (let i = 0; i < wetPos.count; i++) {
+      wetPos.setY(i, terrainHeight(x + wetPos.getX(i), z + wetPos.getZ(i)) - base + 0.08);
+    }
+    const wet = new THREE.Mesh(wetGeo, water);
+    this.spray = new THREE.Group();
+    this.spray.add(spray, wet);
+    this.spray.visible = false;
+    sprinkler.add(this.spray);
+
+    // Neviditelná větší koule pro snadné trefení prstem na dotykové obrazovce
+    const hit = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 6), new THREE.MeshBasicMaterial({ visible: false }));
+    hit.position.y = 1;
+    hit.userData.clickable = 'sprinkler';
+    sprinkler.add(hit);
+
+    this.group.add(sprinkler);
+    this.anchors.sprinkler = new THREE.Vector3(x, base + 3, z);
+  }
+
+  /** @returns {boolean} true, když se vzhled změnil */
+  setIrrigation(running) {
+    if (this.spray.visible === running) return false;
+    this.spray.visible = running;
+    return true;
   }
 
   /**

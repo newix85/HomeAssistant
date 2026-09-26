@@ -28,7 +28,14 @@
     "terraceBattery": "sensor.anenji_4_2kw_anenji_4_2kw_battery_state_of_charge",
     "phaseA": "sensor.shellyem3_485519d7800a_channel_a_power",
     "phaseB": "sensor.shellyem3_485519d7800a_channel_b_power",
-    "phaseC": "sensor.shellyem3_485519d7800a_channel_c_power"
+    "phaseC": "sensor.shellyem3_485519d7800a_channel_c_power",
+    "irrigationProgress": "sensor.irrisense_2_progress",
+    "irrigationActiveZone": "sensor.irrisense_2_active_zone",
+    "irrigationZoneMap": "image.irrisense_2_zone_map",
+    "irrigationZoneSelect": "select.irrisense_2_watering_zone",
+    "irrigationDoseSelect": "select.irrisense_2_dose",
+    "irrigationStart": "button.irrisense_2_start_watering",
+    "irrigationStop": "button.irrisense_2_stop_watering"
   },
   "pvPeakW": {
     "house": 5000,
