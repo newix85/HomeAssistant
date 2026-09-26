@@ -19,7 +19,24 @@
     <div class="time" data-field="time">--:--</div>
     <div class="date" data-field="date"></div>
     <div class="sun-event" data-field="sunEvent"></div>
+
+    <div class="energy card">
+      <div><div class="label">Výroba FVE</div><div class="value" data-field="pvTotal">—</div></div>
+      <div><div class="label" data-field="gridLabel">Odběr ze sítě</div><div class="value" data-field="gridTotal">—</div></div>
+    </div>
   </section>
+
+  <!-- Štítky u objektů ve 3D (pozici nastavuje Overlay.placeTags) -->
+  <div class="tag pv" data-anchor="pvHouse"><b data-field="pvHouse">—</b><span>střecha</span></div>
+  <div class="tag pv" data-anchor="pvEast"><b data-field="pvEast">—</b><span>plot východ</span></div>
+  <div class="tag pv" data-anchor="pvWest"><b data-field="pvWest">—</b><span>plot západ</span></div>
+  <div class="tag pv" data-anchor="pvTerrace"><b data-field="pvTerrace">—</b><span>terasa</span></div>
+  <div class="tag battery" data-anchor="battery"><b><span data-field="terraceBattery">—</span> %</b><span>baterie</span></div>
+  <div class="tag phases" data-anchor="phases">
+    <span>L1 <b data-field="phaseA">—</b></span>
+    <span>L2 <b data-field="phaseB">—</b></span>
+    <span>L3 <b data-field="phaseC">—</b></span>
+  </div>
 
   <section class="weather">
     <div class="card hero">

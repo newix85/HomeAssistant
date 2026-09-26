@@ -3,7 +3,26 @@
 import { HAClient } from './ha.js';
 import { HouseScene } from './scene.js';
 import { Overlay } from './overlay.js';
-import { cloudiness, numericState } from './format.js';
+import { cloudiness, numericState, powerW } from './format.js';
+
+const PV_ROLES = { house: 'pvHouse', east: 'pvEast', west: 'pvWest', terrace: 'pvTerrace' };
+const PHASE_ROLES = ['phaseA', 'phaseB', 'phaseC'];
+
+/** Stav energie pro 3D scénu: podíl výroby 0–1, výkon fází, nabití baterie. */
+function energyState(config, states) {
+  const get = (role) => states.get(config.entities[role]);
+  const pv = {};
+  for (const [name, role] of Object.entries(PV_ROLES)) {
+    const w = get(role) ? powerW(get(role)) : null;
+    const peak = config.pvPeakW?.[name];
+    pv[name] = w === null || !peak ? null : w / peak;
+  }
+  return {
+    pv,
+    phasesW: PHASE_ROLES.map((role) => (get(role) ? powerW(get(role)) : null)),
+    soc: numericState(get('terraceBattery')),
+  };
+}
 
 const overlayRoot = document.getElementById('overlay');
 
@@ -34,6 +53,11 @@ async function start() {
 
   const scene = new HouseScene(document.getElementById('scene'), { renderScale: config.renderScale });
   const overlay = new Overlay(overlayRoot, config);
+  const placeTags = () => overlay.placeTags(scene.anchorPositions());
+  placeTags();
+  addEventListener('resize', placeTags);
+  const energyIds = new Set([...Object.values(PV_ROLES), ...PHASE_ROLES, 'terraceBattery']
+    .map((role) => config.entities[role]).filter(Boolean));
   const { sun: sunId, weather: weatherId } = config.entities;
   let envKey = '';
   let reportedMissing = false;
@@ -56,6 +80,7 @@ async function start() {
         if (missing.length) console.warn(`V HA neexistuje: ${missing.join(', ')}`);
       }
       overlay.update(states);
+      if ([...changed].some((id) => energyIds.has(id))) scene.setEnergy(energyState(config, states));
       if (!changed.has(sunId) && !changed.has(weatherId)) return;
       const sun = states.get(sunId);
       const elevation = numericState({ state: sun?.attributes.elevation }) ?? 30;

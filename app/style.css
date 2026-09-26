@@ -90,3 +90,30 @@ small { font-size: .45em; margin-left: 6px; color: var(--muted); }
 }
 #setup[hidden] { display: none; }
 #setup p { max-width: 36em; color: var(--muted); }
+
+/* Souhrn energie pod hodinami */
+.energy {
+  display: inline-flex;
+  gap: 28px;
+  margin-top: 22px;
+}
+
+/* Štítky u objektů ve 3D: umístěné přes transform (bez přepočtu layoutu) */
+.tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: var(--panel);
+  font-size: 14px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.tag b { font-size: 20px; font-weight: 500; color: var(--text); }
+.tag.pv b { color: #9fd4ff; }
+.tag.phases { flex-direction: row; gap: 12px; }
+.tag.phases b { font-size: 17px; }

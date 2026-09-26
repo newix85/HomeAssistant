@@ -3,8 +3,11 @@
 // (každá změna DOM stojí na RK3288 citelný výkon, viz docs/platform.md).
 
 import {
-  cardinal, conditionText, formatAge, formatDate, formatNumber, formatTime, numericState, seaLevelPressure,
+  cardinal, conditionText, formatAge, formatDate, formatNumber, formatPower, formatTime, numericState, powerW,
+  seaLevelPressure,
 } from './format.js';
+
+const PHASE_ROLES = ['phaseA', 'phaseB', 'phaseC'];
 
 const FLUSH_MS = 1000;
 
@@ -15,6 +18,7 @@ export class Overlay {
     this.el = Object.fromEntries(
       [...root.querySelectorAll('[data-field]')].map((node) => [node.dataset.field, node]),
     );
+    this.tags = [...root.querySelectorAll('[data-anchor]')];
     this.dirty = false;
     this.states = new Map();
     this.#tickClock();
@@ -78,6 +82,22 @@ export class Overlay {
     return formatNumber(n, decimals);
   }
 
+  /** Označí stáří/chybění jako #value, ale vrací výkon ve W. */
+  #power(role) {
+    this.#value(role, 0);
+    const entity = this.#entity(role);
+    return entity ? powerW(entity) : null;
+  }
+
+  /** Umístí štítky k bodům 3D scény (volá se po startu a při změně velikosti). */
+  placeTags(positions) {
+    for (const tag of this.tags) {
+      const pos = positions[tag.dataset.anchor];
+      if (!pos) continue;
+      tag.style.transform = `translate(${Math.round(pos.x)}px, ${Math.round(pos.y)}px) translate(-50%, -100%)`;
+    }
+  }
+
   #unit(role, fallback) {
     return this.#entity(role)?.attributes.unit_of_measurement ?? fallback;
   }
@@ -114,6 +134,17 @@ export class Overlay {
 
     this.#set('rainRate', this.#value('rainRate', 1));
     this.#set('rainToday', this.#value('rainToday', 1));
+
+    for (const role of ['pvHouse', 'pvEast', 'pvWest', 'pvTerrace', 'pvTotal']) {
+      this.#set(role, formatPower(this.#power(role)));
+    }
+    const phases = PHASE_ROLES.map((role) => this.#power(role));
+    phases.forEach((w, i) => this.#set(PHASE_ROLES[i], formatPower(w)));
+    const known = phases.filter((w) => w !== null);
+    const grid = known.length ? known.reduce((a, b) => a + b, 0) : null;
+    this.#set('gridLabel', grid !== null && grid < 0 ? 'Dodávka do sítě' : 'Odběr ze sítě');
+    this.#set('gridTotal', formatPower(grid === null ? null : Math.abs(grid)));
+    this.#set('terraceBattery', this.#value('terraceBattery', 0));
 
     const weather = this.#entity('weather');
     this.#set('condition', (weather && conditionText(weather.state)) ?? '');

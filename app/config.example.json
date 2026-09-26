@@ -19,6 +19,21 @@
     "windGust": "sensor.gw1100a_wind_gust",
     "windDirection": "sensor.gw1100a_wind_direction",
     "rainRate": "sensor.gw1100a_rain_rate",
-    "rainToday": "sensor.gw1100a_daily_rain_rate"
+    "rainToday": "sensor.gw1100a_daily_rain_rate",
+    "pvTotal": "sensor.total_power_generation",
+    "pvHouse": "sensor.solax_inverter_pv_power_1",
+    "pvEast": "sensor.hms_2000_left_powerdc",
+    "pvWest": "sensor.hms_2000_right_powerdc",
+    "pvTerrace": "sensor.anenji_4_2kw_anenji_4_2kw_pv_average_power",
+    "terraceBattery": "sensor.anenji_4_2kw_anenji_4_2kw_battery_state_of_charge",
+    "phaseA": "sensor.shellyem3_485519d7800a_channel_a_power",
+    "phaseB": "sensor.shellyem3_485519d7800a_channel_b_power",
+    "phaseC": "sensor.shellyem3_485519d7800a_channel_c_power"
+  },
+  "pvPeakW": {
+    "house": 5000,
+    "east": 2000,
+    "west": 2000,
+    "terrace": 3000
   }
 }

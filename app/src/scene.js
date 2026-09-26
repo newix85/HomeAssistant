@@ -2,6 +2,7 @@
 // Kreslí se jen na vyžádání (requestRender), žádná trvalá smyčka.
 
 import * as THREE from 'three';
+import { Property } from './property.js';
 
 // Barvy oblohy [zenit, horizont] podle výšky slunce nad obzorem (°)
 const SKY_KEYS = [
@@ -58,15 +59,18 @@ export class HouseScene {
 
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog('#cfe6ff', 70, 330);
-    this.camera = new THREE.PerspectiveCamera(40, 1, 0.5, 600);
-    this.camera.position.set(30, 13, 34);
-    this.camera.lookAt(0, 3.5, 0);
+    // Od jihovýchodu: vidět obloha, střecha s FVE, oba ploty i terasa za domem
+    this.camera = new THREE.PerspectiveCamera(44, 1, 0.5, 600);
+    this.camera.position.set(28, 15, 30);
+    this.camera.lookAt(-1, 3.5, -4);
 
     this.#buildSky();
     this.#buildLights();
     this.#buildGround();
     this.#buildHouse();
     this.#buildTrees();
+    this.property = new Property();
+    this.scene.add(this.property.group);
 
     this.renderPending = false;
     addEventListener('resize', () => this.#resize());
@@ -162,7 +166,7 @@ export class HouseScene {
     const m = new THREE.Matrix4(), q = new THREE.Quaternion();
     for (let i = 0; i < count; i++) {
       const a = (i / count) * Math.PI * 2 + (i % 3) * 0.3;
-      const r = 20 + ((i * 37) % 30);
+      const r = 27 + ((i * 37) % 36); // za plotem
       const s = 0.7 + ((i * 13) % 10) / 15;
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
       const scale = new THREE.Vector3(s, s, s);
@@ -209,6 +213,22 @@ export class HouseScene {
     // Okna v noci svítí, přes den odrážejí oblohu
     this.windowMaterial.color.set(elevation < -2 ? '#ffd98a' : '#9fb8c8');
     this.requestRender();
+  }
+
+  /** Pozice štítků na obrazovce v CSS px: { název: { x, y } } */
+  anchorPositions() {
+    const w = innerWidth, h = innerHeight;
+    this.camera.updateMatrixWorld(); // před prvním renderem matice kamery ještě neplatí
+    const out = {};
+    for (const [name, point] of Object.entries(this.property.anchors)) {
+      const v = point.clone().project(this.camera);
+      out[name] = { x: (v.x + 1) / 2 * w, y: (1 - v.y) / 2 * h };
+    }
+    return out;
+  }
+
+  setEnergy(energy) {
+    if (this.property.setEnergy(energy)) this.requestRender();
   }
 
   requestRender() {

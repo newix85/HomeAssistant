@@ -82,3 +82,20 @@ export function formatAge(seconds) {
   if (seconds < 86400) return `před ${Math.round(seconds / 3600)} h`;
   return `před ${Math.round(seconds / 86400)} d`;
 }
+
+/** Výkon entity ve W (převede kW/MW), nebo null. */
+export function powerW(entity) {
+  const n = numericState(entity);
+  if (n === null) return null;
+  const unit = entity.attributes.unit_of_measurement;
+  if (unit === 'kW') return n * 1000;
+  if (unit === 'MW') return n * 1e6;
+  return n;
+}
+
+/** „850 W“ / „3,21 kW“ */
+export function formatPower(watts) {
+  if (watts === null) return '—';
+  const abs = Math.abs(watts);
+  return abs < 1000 ? `${formatNumber(watts, 0)} W` : `${formatNumber(watts / 1000, abs < 10000 ? 2 : 1)} kW`;
+}

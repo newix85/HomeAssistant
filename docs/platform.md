@@ -170,7 +170,12 @@ vždy. Pozor na záměnu: „zahrada“ = zahrada kolem domu, „zahrádka“ = 
 
 Každý pohled = jedna „scéna“ se sdíleným rendererem a sdíleným HA stavem:
 
-1. **Dům** – exteriér, obloha podle času/slunce, overlay: světelnost, čas, teplota, tlak, vlhkost, UV/radiace, vítr, déšť
+1. **Dům** – exteriér, obloha podle času/slunce, overlay: světelnost, čas, teplota, tlak, vlhkost, UV/radiace, vítr, déšť.
+   Pozemek (`app/src/property.js`): FVE na jižní střeše (Solax), plot s FVE na východě
+   (HMS-2000 left) a západě (HMS-2000 right), terasa vzadu (sever) s vířivkou a pergolou
+   s FVE (Anenji) + baterie terasy, přípojka 3 fází (Shelly EM3) ze sloupu vpředu.
+   Panely svítí podle podílu výkonu z `pvPeakW`, kabely se barví podle odběru
+   (oranžová) nebo dodávky (zelená). Hodnoty ve štítcích přichycených k objektům.
 2. **Průřez domem** – clipping plane v Three.js, místnosti obarvené podle teploty/stavu
 3. **Zahrada** – body zájmu (zavlažování, osvětlení, …) jako klikací hotspoty
 4. **Kamery** – mřížka `<video>` přes go2rtc
