@@ -24,7 +24,7 @@ $remote = "export DISPLAY=`${DISPLAY:-:0}; " +
   "elif command -v import >/dev/null 2>&1; then import -window root $remoteFile; " +
   "else echo 'Na desce chybí nástroj pro snímek. Nainstaluj: sudo apt install -y scrot' >&2; exit 3; fi"
 
-Write-Host "Připojuji se k $Target…"
+Write-Host "Připojuji se k $($Target)…"
 ssh $Target $remote
 if ($LASTEXITCODE -ne 0) { throw "Snímek se nepodařilo pořídit (viz hláška výše)." }
 

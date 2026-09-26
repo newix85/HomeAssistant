@@ -38,7 +38,7 @@ fi
 cat "$f"
 '
 
-echo "Připojuji se k $TARGET…" >&2
+echo "Připojuji se k ${TARGET}…" >&2
 if ! $SSH "$TARGET" 'bash -s' <<<"$REMOTE" >"$TMP"; then
   rm -f "$TMP"
   echo "Snímek se nepodařilo pořídit (viz hláška výše)." >&2
