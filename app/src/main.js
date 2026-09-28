@@ -4,6 +4,7 @@ import { HAClient } from './ha.js';
 import { HouseScene } from './scene.js';
 import { Overlay } from './overlay.js';
 import { Irrigation, irrigationRunning } from './irrigation.js';
+import { Terrace } from './terrace.js';
 import { cloudiness, numericState, powerW } from './format.js';
 
 const PV_ROLES = { house: 'pvHouse', east: 'pvEast', west: 'pvWest', terrace: 'pvTerrace' };
@@ -82,6 +83,7 @@ async function start() {
       }
       overlay.update(states);
       irrigation.update(states);
+      terrace.update(states, changed);
       scene.setIrrigation(irrigationRunning(states.get(config.entities.irrigationProgress)));
       if ([...changed].some((id) => energyIds.has(id))) scene.setEnergy(energyState(config, states));
       if (!changed.has(sunId) && !changed.has(weatherId)) return;
@@ -99,12 +101,18 @@ async function start() {
   const irrigation = new Irrigation(
     document.querySelector('.tag.irrigation'), document.getElementById('irrigation-panel'), config, client,
   );
+  const terrace = new Terrace(
+    [document.querySelector('[data-anchor="pvTerrace"]'), document.querySelector('[data-anchor="battery"]')],
+    document.getElementById('terrace-panel'), config, client,
+  );
   // Klepnutí do 3D scény: je pod prstem klikací objekt?
   document.getElementById('scene').addEventListener('click', (e) => {
-    if (scene.pick(e.clientX, e.clientY) === 'sprinkler') irrigation.open();
+    const target = scene.pick(e.clientX, e.clientY);
+    if (target === 'sprinkler') irrigation.open();
+    if (target === 'terrace') terrace.open();
   });
   client.start();
-  Object.assign(window, { dum3d: { client, scene, overlay, config } }); // pro ladění v konzoli
+  Object.assign(window, { dum3d: { client, scene, overlay, irrigation, terrace, config } }); // pro ladění v konzoli
 }
 
 addEventListener('error', (e) => console.error('Chyba:', e.message));

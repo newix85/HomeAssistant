@@ -30,8 +30,12 @@
   <div class="tag pv" data-anchor="pvHouse"><b data-field="pvHouse">—</b><span>střecha</span></div>
   <div class="tag pv" data-anchor="pvEast"><b data-field="pvEast">—</b><span>plot východ</span></div>
   <div class="tag pv" data-anchor="pvWest"><b data-field="pvWest">—</b><span>plot západ</span></div>
-  <div class="tag pv" data-anchor="pvTerrace"><b data-field="pvTerrace">—</b><span>terasa</span></div>
-  <div class="tag battery" data-anchor="battery"><b><span data-field="terraceBattery">—</span> %</b><span>baterie</span></div>
+  <div class="tag pv clickable" data-anchor="pvTerrace" role="button" tabindex="0" aria-label="Detail terasy">
+    <b data-field="pvTerrace">—</b><span>terasa</span>
+  </div>
+  <div class="tag battery clickable" data-anchor="battery" role="button" tabindex="0" aria-label="Detail baterie a terasy">
+    <b><span data-field="terraceBattery">—</span> %</b><span>baterie</span>
+  </div>
   <div class="tag irrigation clickable" data-anchor="sprinkler" role="button">
     <b data-irrigation="status">—</b><span>zavlažování</span>
     <i class="bar"><i data-irrigation="bar"></i></i>
@@ -104,6 +108,40 @@
         <button class="stop" data-action="stop">Zastavit</button>
       </div>
       <p class="note" data-irrigation="note"></p>
+    </div>
+  </div>
+</section>
+
+<section id="terrace-panel" class="panel terrace-panel" hidden>
+  <header>
+    <h2>Terasa a baterie</h2>
+    <button class="close" data-action="close" aria-label="Zavřít">✕</button>
+  </header>
+  <div class="terrace-body">
+    <div class="terrace-battery">
+      <div class="label">Stav baterie</div>
+      <div class="terrace-soc"><span data-terrace="battery">—</span><small>%</small></div>
+      <div class="terrace-production">
+        <div class="label">Výroba FVE</div>
+        <strong data-terrace="production">—</strong>
+      </div>
+    </div>
+    <div class="terrace-controls">
+      <section>
+        <div class="label">Režim výstupu</div>
+        <div class="choices terrace-choices" data-terrace="modes"></div>
+      </section>
+      <section class="terrace-automation">
+        <div>
+          <div class="label">Automatické přepínání při přebytku FVE</div>
+          <p data-terrace="automation-status">Stav není dostupný</p>
+        </div>
+        <div class="actions">
+          <button class="enable" data-action="automation-on">Zapnout</button>
+          <button class="disable" data-action="automation-off">Vypnout</button>
+        </div>
+      </section>
+      <p class="note" data-terrace="note"></p>
     </div>
   </div>
 </section>

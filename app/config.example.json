@@ -26,6 +26,8 @@
     "pvWest": "sensor.hms_2000_right_powerdc",
     "pvTerrace": "sensor.anenji_4_2kw_anenji_4_2kw_pv_average_power",
     "terraceBattery": "sensor.anenji_4_2kw_anenji_4_2kw_battery_state_of_charge",
+    "terraceOutputPriority": "select.anenji_4_2kw_anenji_4_2kw_output_priority",
+    "terraceAutomation": "automation.anenji_prepnout_na_suf_pri_vyssim_pv_nez_load_bez_pomocneho_senzoru",
     "phaseA": "sensor.shellyem3_485519d7800a_channel_a_power",
     "phaseB": "sensor.shellyem3_485519d7800a_channel_b_power",
     "phaseC": "sensor.shellyem3_485519d7800a_channel_c_power",

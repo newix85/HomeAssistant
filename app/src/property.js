@@ -145,17 +145,22 @@ export class Property {
 
     const floor = new THREE.Mesh(new THREE.BoxGeometry(7, 0.3, 6), lambert('#b08a62'));
     floor.position.set(cx, base + 0.15, cz);
+    floor.userData.clickable = 'terrace';
     this.group.add(floor);
 
     const posts = [[-3.2, -2.7], [3.2, -2.7], [-3.2, 2.7], [3.2, 2.7]]
       .map(([dx, dz]) => ({ position: new THREE.Vector3(cx + dx, base + 1.6, cz + dz) }));
-    this.group.add(instanced(new THREE.BoxGeometry(0.2, 2.6, 0.2), lambert('#6b5038'), posts));
+    const terracePosts = instanced(new THREE.BoxGeometry(0.2, 2.6, 0.2), lambert('#6b5038'), posts);
+    terracePosts.userData.clickable = 'terrace';
+    this.group.add(terracePosts);
 
     const tub = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.9, 20), lambert('#e9e4da'));
     tub.position.set(cx, base + 0.75, cz);
     const water = new THREE.Mesh(new THREE.CircleGeometry(1.1, 20), new THREE.MeshBasicMaterial({ color: '#63c7e0' }));
     water.rotation.x = -Math.PI / 2;
     water.position.set(cx, base + 1.21, cz);
+    tub.userData.clickable = 'terrace';
+    water.userData.clickable = 'terrace';
     this.group.add(tub, water);
 
     // Střecha z panelů, mírně skloněná k jihu (ke kameře)
@@ -169,7 +174,9 @@ export class Property {
         });
       }
     }
-    this.group.add(instanced(new THREE.BoxGeometry(1.45, 0.06, 1.1), this.pvMaterials.terrace, roofPanels));
+    const terracePanels = instanced(new THREE.BoxGeometry(1.45, 0.06, 1.1), this.pvMaterials.terrace, roofPanels);
+    terracePanels.userData.clickable = 'terrace';
+    this.group.add(terracePanels);
     this.anchors.pvTerrace = new THREE.Vector3(cx, base + 4.2, cz);
 
     // Baterie vedle altánu: skříňka s ukazatelem nabití na přední (jižní) straně
@@ -177,11 +184,13 @@ export class Property {
     const bBase = terrainHeight(bx, bz);
     const cabinet = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.3, 0.5), lambert('#d8dde3'));
     cabinet.position.set(bx, bBase + 0.65, bz);
+    cabinet.userData.clickable = 'terrace';
     this.group.add(cabinet);
     this.socBarMaterial = new THREE.MeshBasicMaterial({ color: '#5fd38a' });
     this.socBar = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 1), this.socBarMaterial);
     this.socBarBase = bBase + 0.15; // spodní okraj ukazatele (y)
     this.socBar.position.set(bx, bBase + 0.6, bz + 0.26);
+    this.socBar.userData.clickable = 'terrace';
     this.group.add(this.socBar);
     this.anchors.battery = new THREE.Vector3(bx + 0.6, bBase + 1.8, bz);
   }

@@ -6,14 +6,14 @@
 
 | Vrstva | Volba | Proč |
 |---|---|---|
-| Runtime / displej | **Chromium v kiosk režimu** spuštěný z autostartu XFCE | Nejlepší WebGL na ARM Linuxu (GPU přes Mesa/Panfrost), bez okenních dekorací, snadný restart |
+| Runtime / displej | **Chromium v kiosk režimu**, ručně spouštěné přes `scripts/run-app.sh` | Nejlepší WebGL na ARM Linuxu (GPU přes Mesa/Panfrost), bez okenních dekorací; autostart XFCE je zatím odložen |
 | 3D | **Three.js** (WebGL 2, fallback WebGL 1) | Malý, zralý, glTF loader, ideální pro minimalistický low-poly styl |
 | Jazyk / build | **Čisté ES moduly (JavaScript), bez buildu** | Na desce stačí `git pull`; three.js přibalené v `app/vendor/` (žádná závislost na CDN/internetu). *Změna oproti původnímu TypeScript + Vite: armv7 deska nemá build nástroje a kiosk nesmí záviset na síti.* |
 | UI nad scénou | Čisté HTML/CSS overlaye (bez velkého frameworku) | Minimalismus, nulová režie; framework lze přidat později, pokud UI naroste |
 | Napojení na HA | **WebSocket API**, vlastní klient `app/src/ha.js` (~150 řádků) | Push stavů (`subscribe_entities` s `entity_ids`), reconnect s backoffem, ping/pong hlídá mrtvé spojení |
 | Kamery | HA stream / **go2rtc (WebRTC nebo MSE)** do `<video>` | Nízká latence, dekódování v prohlížeči, žádná vlastní transkódovací vrstva |
 | 3D modely | **glTF/GLB** (Blender, případně export ze Sweet Home 3D) | Standard, komprimovatelný (Draco/meshopt), přímá podpora v Three.js |
-| Nasazení | `app/` servírované lokálně (`python3 -m http.server` na 127.0.0.1), spuštění `scripts/run-app.sh` | Žádný Node ani build na zařízení |
+| Nasazení | `app/` lokálně servíruje `scripts/serve.py` s `Cache-Control: no-cache`; spuštění `scripts/run-app.sh` | Žádný Node ani build na zařízení; po `git pull` se nesmí míchat cachované ES moduly |
 
 Jedna věta: **webová aplikace (Three.js) jako statické soubory, zobrazená v Chromium kiosku, mluvící přímo s HA přes WebSocket.**
 
@@ -173,7 +173,9 @@ Každý pohled = jedna „scéna“ se sdíleným rendererem a sdíleným HA sta
 1. **Dům** – exteriér, obloha podle času/slunce, overlay: světelnost, čas, teplota, tlak, vlhkost, UV/radiace, vítr, déšť.
    Pozemek (`app/src/property.js`): dům dole pod kopcem, za ním svah na sever. Plot
    vede po stranách pozemku do kopce, na něm FVE východ (HMS-2000 left) a západ
-   (HMS-2000 right). Na vrcholu altán s vířivkou, FVE na jeho střeše (Anenji) a baterie.
+   (HMS-2000 right). Na vrcholu je altán s vířivkou, FVE na jeho střeše (Anenji)
+   a baterie. Altán, terasová FVE a baterie jsou klikací; detail terasy ukazuje
+   stav baterie, režim výstupu Anenji a ovládání automatizace přepínání.
    FVE na jižní střeše domu (Solax), přípojka 3 fází (Shelly EM3) ze sloupu vpředu.
    Terén je jedna výšková funkce `terrainHeight()`, podle které stojí plot, panely,
    altán i stromy.

@@ -171,3 +171,43 @@ small { font-size: .45em; margin-left: 6px; color: var(--muted); }
 .note { min-height: 1.4em; margin: 4px 0 0; color: var(--muted); }
 .note.ok { color: var(--ok); }
 .note.error { color: var(--bad); }
+
+/* Detail terasy a baterie: přehledné ovladače pro dotykový panel */
+.terrace-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(280px, .8fr) minmax(0, 1.8fr);
+  gap: 28px;
+  padding: 24px 28px 28px;
+  min-height: 0;
+}
+.terrace-battery {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .05);
+}
+.terrace-soc { font-size: 88px; font-weight: 250; line-height: 1; }
+.terrace-soc small { font-size: .42em; }
+.terrace-production { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 12px; }
+.terrace-production strong { font-size: 32px; font-weight: 350; color: #9fd4ff; }
+.terrace-controls { display: flex; flex-direction: column; justify-content: center; gap: 22px; min-width: 0; }
+.terrace-choices { margin-top: 10px; }
+.terrace-choices button { min-height: 68px; }
+.terrace-automation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, .9fr);
+  align-items: center;
+  gap: 20px;
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .05);
+}
+.terrace-automation p { margin: 8px 0 0; font-size: 22px; }
+.terrace-automation .actions { margin-top: 0; }
+.terrace-automation .enable { background: #2f9e5b; }
+.terrace-automation .disable { background: #b8453a; }
+.terrace-automation button:disabled, .terrace-choices button:disabled { opacity: .55; }
